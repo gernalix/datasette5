@@ -1,0 +1,148 @@
+==== Datasette HTTPS launcher at 26/10/2025  6:40:03,61 ==== 
+Working dir: Z:\download\datasette5 
+[OK] Found asset: "static\custom\format_overrides.js" 
+[OK] Found asset: "static\custom\format_overrides.css" 
+[OK] Found asset: "templates\base.html" 
+[INFO] Plugins dir not found; continuing without it. 
+[INFO] metadata.json not found; continuing without it. 
+[OK] Using templates dir: "templates" 
+[OK] Serving static custom: "static\custom" 
+[OK] HTTPS enabled. 
+Running: datasette "output.db" --host 0.0.0.0 --port 8001 --ssl-certfile "C:\Users\seste\daniele.tail6b4058.ts.net.crt" --ssl-keyfile "C:\Users\seste\daniele.tail6b4058.ts.net.key" --template-dir "templates" --static custom:"static\custom"   
+C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\site-packages\datasette\app.py:14: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
+  import pkg_resources
+INFO:     Started server process [1760]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on https://0.0.0.0:8001 (Press CTRL+C to quit)
+INFO:     100.126.19.77:52651 - "GET /output/sex HTTP/1.1" 200 OK
+INFO:     100.126.19.77:52651 - "GET /-/static/app.css?d59929 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:51978 - "GET /-/static/app.css HTTP/1.1" 200 OK
+INFO:     100.126.19.77:54071 - "GET /custom/styles.css?v=4 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:58629 - "GET /custom/desktop.css?v=4 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:58629 - "GET /custom/formatting.js?v=4 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:51978 - "GET /custom/fix_links.js?v=5 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:54071 - "GET /custom/click_to_filter.js?v=4 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:52651 - "GET /custom/timestamp_calendar_button.js?v=1 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:58629 - "GET /-/static/table.js HTTP/1.1" 200 OK
+INFO:     100.126.19.77:52770 - "GET /custom/timestamp_autosize_config.js HTTP/1.1" 200 OK
+INFO:     100.126.19.77:58660 - "GET /custom/mobile.css?v=4 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:58629 - "GET /custom/timestamp_columns.txt HTTP/1.1" 200 OK
+INFO:     100.126.19.77:58629 - "GET /custom/timestamp_columns.txt HTTP/1.1" 200 OK
+INFO:     100.126.19.77:58629 - "GET /output/sex HTTP/1.1" 200 OK
+INFO:     100.126.19.77:58629 - "GET /-/static/app.css?d59929 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:58660 - "GET /-/static/app.css HTTP/1.1" 200 OK
+INFO:     100.126.19.77:54071 - "GET /custom/styles.css?v=4 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:52770 - "GET /custom/desktop.css?v=4 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:58660 - "GET /custom/formatting.js?v=4 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:52770 - "GET /custom/fix_links.js?v=5 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:54071 - "GET /custom/click_to_filter.js?v=4 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:58629 - "GET /custom/timestamp_calendar_button.js?v=1 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:52651 - "GET /custom/timestamp_autosize_config.js HTTP/1.1" 200 OK
+INFO:     100.126.19.77:51978 - "GET /-/static/table.js HTTP/1.1" 200 OK
+INFO:     100.126.19.77:58660 - "GET /custom/mobile.css?v=4 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:54071 - "GET /custom/timestamp_columns.txt HTTP/1.1" 200 OK
+INFO:     100.126.19.77:54071 - "GET /custom/timestamp_columns.txt HTTP/1.1" 200 OK
+INFO:     100.126.19.77:54071 - "GET /output/sex HTTP/1.1" 200 OK
+INFO:     100.126.19.77:54071 - "GET /-/static/app.css?d59929 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:51978 - "GET /-/static/app.css HTTP/1.1" 200 OK
+INFO:     100.126.19.77:58660 - "GET /custom/styles.css?v=4 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:52651 - "GET /custom/desktop.css?v=4 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:51978 - "GET /custom/formatting.js?v=4 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:52651 - "GET /custom/fix_links.js?v=5 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:58660 - "GET /custom/click_to_filter.js?v=4 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:54071 - "GET /custom/timestamp_calendar_button.js?v=1 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:52770 - "GET /-/static/table.js HTTP/1.1" 200 OK
+INFO:     100.126.19.77:58629 - "GET /custom/timestamp_autosize_config.js HTTP/1.1" 200 OK
+INFO:     100.126.19.77:51978 - "GET /custom/mobile.css?v=4 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:52770 - "GET /custom/timestamp_columns.txt HTTP/1.1" 200 OK
+INFO:     100.126.19.77:52770 - "GET /custom/timestamp_columns.txt HTTP/1.1" 200 OK
+INFO:     100.126.19.77:52770 - "GET /output/sex HTTP/1.1" 200 OK
+INFO:     100.126.19.77:58660 - "GET /-/static/app.css HTTP/1.1" 200 OK
+INFO:     100.126.19.77:52770 - "GET /-/static/app.css?d59929 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:51978 - "GET /custom/styles.css?v=4 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:58629 - "GET /custom/desktop.css?v=4 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:52770 - "GET /custom/formatting.js?v=4 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:58660 - "GET /custom/fix_links.js?v=5 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:58629 - "GET /custom/click_to_filter.js?v=4 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:51978 - "GET /custom/timestamp_calendar_button.js?v=1 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:54071 - "GET /custom/timestamp_autosize_config.js HTTP/1.1" 200 OK
+INFO:     100.126.19.77:52651 - "GET /-/static/table.js HTTP/1.1" 200 OK
+INFO:     100.126.19.77:52770 - "GET /custom/mobile.css?v=4 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:52770 - "GET /custom/timestamp_columns.txt HTTP/1.1" 200 OK
+INFO:     100.126.19.77:52770 - "GET /custom/timestamp_columns.txt HTTP/1.1" 200 OK
+Exception in callback _ProactorBasePipeTransport._call_connection_lost()
+handle: <Handle _ProactorBasePipeTransport._call_connection_lost()>
+Traceback (most recent call last):
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\events.py", line 89, in _run
+    self._context.run(self._callback, *self._args)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\proactor_events.py", line 165, in _call_connection_lost
+    self._sock.shutdown(socket.SHUT_RDWR)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+ConnectionResetError: [WinError 10054] An existing connection was forcibly closed by the remote host
+Exception in callback _ProactorBasePipeTransport._call_connection_lost()
+handle: <Handle _ProactorBasePipeTransport._call_connection_lost()>
+Traceback (most recent call last):
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\events.py", line 89, in _run
+    self._context.run(self._callback, *self._args)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\proactor_events.py", line 165, in _call_connection_lost
+    self._sock.shutdown(socket.SHUT_RDWR)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+ConnectionResetError: [WinError 10054] An existing connection was forcibly closed by the remote host
+Exception in callback _ProactorBasePipeTransport._call_connection_lost()
+handle: <Handle _ProactorBasePipeTransport._call_connection_lost()>
+Traceback (most recent call last):
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\events.py", line 89, in _run
+    self._context.run(self._callback, *self._args)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\proactor_events.py", line 165, in _call_connection_lost
+    self._sock.shutdown(socket.SHUT_RDWR)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+ConnectionResetError: [WinError 10054] An existing connection was forcibly closed by the remote host
+Exception in callback _ProactorBasePipeTransport._call_connection_lost()
+handle: <Handle _ProactorBasePipeTransport._call_connection_lost()>
+Traceback (most recent call last):
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\events.py", line 89, in _run
+    self._context.run(self._callback, *self._args)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\proactor_events.py", line 165, in _call_connection_lost
+    self._sock.shutdown(socket.SHUT_RDWR)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+ConnectionResetError: [WinError 10054] An existing connection was forcibly closed by the remote host
+Exception in callback _ProactorBasePipeTransport._call_connection_lost()
+handle: <Handle _ProactorBasePipeTransport._call_connection_lost()>
+Traceback (most recent call last):
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\events.py", line 89, in _run
+    self._context.run(self._callback, *self._args)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\proactor_events.py", line 165, in _call_connection_lost
+    self._sock.shutdown(socket.SHUT_RDWR)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+ConnectionResetError: [WinError 10054] An existing connection was forcibly closed by the remote host
+Exception in callback _ProactorBasePipeTransport._call_connection_lost()
+handle: <Handle _ProactorBasePipeTransport._call_connection_lost()>
+Traceback (most recent call last):
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\events.py", line 89, in _run
+    self._context.run(self._callback, *self._args)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\proactor_events.py", line 165, in _call_connection_lost
+    self._sock.shutdown(socket.SHUT_RDWR)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+ConnectionResetError: [WinError 10054] An existing connection was forcibly closed by the remote host
+INFO:     100.126.19.77:63693 - "GET /output/sex HTTP/1.1" 200 OK
+INFO:     100.126.19.77:63693 - "GET /-/static/app.css?d59929 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:59530 - "GET /-/static/app.css HTTP/1.1" 200 OK
+INFO:     100.126.19.77:56433 - "GET /custom/styles.css?v=4 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:59622 - "GET /custom/desktop.css?v=4 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:59622 - "GET /custom/formatting.js?v=4 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:56433 - "GET /custom/fix_links.js?v=5 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:59622 - "GET /custom/click_to_filter.js?v=4 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:59530 - "GET /custom/timestamp_calendar_button.js?v=1 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:63693 - "GET /custom/timestamp_autosize_config.js HTTP/1.1" 200 OK
+INFO:     100.126.19.77:63228 - "GET /-/static/table.js HTTP/1.1" 200 OK
+INFO:     100.126.19.77:64714 - "GET /custom/mobile.css?v=4 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:63228 - "GET /custom/timestamp_columns.txt HTTP/1.1" 200 OK
+INFO:     100.126.19.77:63228 - "GET /custom/timestamp_columns.txt HTTP/1.1" 200 OK
+^C

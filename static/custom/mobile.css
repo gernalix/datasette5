@@ -1,0 +1,69 @@
+/* --- SOLO MOBILE: carica questo file con media="(max-width: 900px)" --- */
+
+/* 0) Contenitore scrollabile orizzontale pulito (niente ombre/tagli) */
+.table-wrapper {
+  overflow-x: auto !important;
+}
+.table-wrapper::before,
+.table-wrapper::after {
+  /* alcuni temi aggiungono gradient/ombre di overflow: li rimuoviamo */
+  content: none !important;
+}
+
+/* 1) Mantieni tabella “vera” (no card impilate) e stabilizza layout */
+.rows-and-columns table,
+.rows-and-columns thead,
+.rows-and-columns tbody,
+.rows-and-columns tr,
+.rows-and-columns th,
+.rows-and-columns td {
+  display: revert !important;
+}
+.rows-and-columns table {
+  width: 100% !important;
+  min-width: 900px;              /* evita compressione estrema */
+  table-layout: fixed !important;/* colonne stabili, niente slittamenti */
+  border-collapse: collapse !important;
+}
+
+/* 2) Header leggibile e non sovrapposto */
+.rows-and-columns thead th {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: #fff;              /* niente trasparenze che “tagliano” */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 30ch;               /* limita la larghezza del titolo */
+}
+
+/* 3) Celle compatte e allineate */
+.rows-and-columns th,
+.rows-and-columns td {
+  white-space: nowrap;           /* niente wrap a capo */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 6px 10px !important;  /* densità maggiore su mobile */
+  vertical-align: top;
+  border-right: 1px solid rgba(0,0,0,0.08);
+}
+.rows-and-columns th:last-child,
+.rows-and-columns td:last-child {
+  border-right: 0;
+}
+
+/* 4) Spazio extra dopo la prima colonna (id) per non “attaccarsi” a inizio */
+.rows-and-columns th:first-child,
+.rows-and-columns td:first-child {
+  min-width: 3.5rem;             /* allarga un pelo l'ID */
+  padding-right: 14px !important;
+}
+
+/* 5) Nascondi eventuali layout “card” del tema responsive */
+.row-card,
+.row-wrapper,
+.card,
+.record-card {
+  display: none !important;
+}

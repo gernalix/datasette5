@@ -1,0 +1,74 @@
+/* cursore mano sulle celle filtrabili */
+td[title^="Click to filter"] { cursor: pointer; }
+
+/* nascondi il "numeretto grigio" accanto ai link (em) e eventuale secondo link */
+table.rows-and-columns td > em,
+table.rows-and-columns-alternate td > em {
+  display: none !important;
+}
+table.rows-and-columns td a + a,
+table.rows-and-columns-alternate td a + a {
+  display: none !important;
+}
+
+/* date leggibili e senza a capo */
+th.is-date, td.is-date {
+  white-space: nowrap;
+  min-width: 120px;   /* spazio sufficiente per 'dd-mm-yy hh:mm' */
+  max-width: 160px;
+}
+
+/* Date columns: larghezza minima e niente a capo */
+th.date-col,
+td.date-col {
+  min-width: 120px;   /* 120px è perfetto per "dd-mm-yy hh:mm" */
+  white-space: nowrap;
+  text-align: left;   /* oppure center se preferisci */
+}
+
+/* opzionale: riduci un po' il padding per vedere più colonne */
+table td.date-col, table th.date-col {
+  padding-right: 8px;
+  padding-left: 8px;
+}
+
+/* Hide Datasette schema (CREATE TABLE ...) under tables */
+h3#schema,
+h2#schema,
+h3#schema + pre.schema,
+pre.schema {
+  display: none !important;
+}
+
+/* --- Hide CREATE TABLE section under tables (robust JS fallback below) --- */
+pre:has(> code.sql-schema),
+pre:has(> code.sql),
+pre:contains("CREATE TABLE"),
+div.sql-schema,
+div.sql-schema + pre {
+  display: none !important;
+}
+
+/* Nasconde il riquadro "Advanced export" sotto le tabelle */
+div.export-options,
+form.export-options,
+div.card.export-options,
+#export-options,
+#export {
+  display: none !important;
+}
+
+@media (max-width: 768px) {
+  .table-wrapper, .table-container {
+    display: block !important;
+    overflow-x: auto !important;
+    white-space: nowrap !important;
+  }
+  table {
+    width: 100% !important;
+    display: table !important;
+  }
+  .row-card, .mobile-row, [class*="card-row"] {
+    display: none !important;
+  }
+}

@@ -1,0 +1,24 @@
+C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\site-packages\datasette\app.py:14: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
+  import pkg_resources
+Usage: python -m datasette serve [OPTIONS] [FILES]...
+Try 'python -m datasette serve --help' for help.
+
+Error: No such option: --verbose Did you mean --version-note?
+C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\site-packages\datasette\app.py:14: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
+  import pkg_resources
+Usage: python -m datasette serve [OPTIONS] [FILES]...
+Try 'python -m datasette serve --help' for help.
+
+Error: No such option: --verbose Did you mean --version-note?
+C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\site-packages\datasette\app.py:14: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
+  import pkg_resources
+Starting monitor for PID 11512.
+C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\site-packages\datasette\app.py:14: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
+  import pkg_resources
+INFO:     Started server process [11512]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on https://0.0.0.0:8001 (Press CTRL+C to quit)
+^CC:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\site-packages\datasette\app.py:14: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
+  import pkg_resources
+^C

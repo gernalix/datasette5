@@ -1,0 +1,1 @@
+console.debug('timestamp_calendar_button.js loaded');

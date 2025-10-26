@@ -1,0 +1,318 @@
+// Click-to-filter (no heuristics) + date formatting + day-filter on timestamps + hide empty/all-false boolean columns
+// - LOOKUP: filtra usando l'ID reale estratto dall'URL (supporta ID non numerici)
+// - MAIN tables: nav sempre (clic ovunque nella cella)
+// - BOOLEAN: SOLO liste (nessuna euristica). NULL => ❌ con filtro __isnull=1
+// - DATE: render dd-mm-yy hh:mm; click su cella data => filtra per GIORNO con substr("col",1,10)='YYYY-MM-DD'
+// - HIDE: colonne tutte vuote (sempre) + colonne booleane (lista) tutte false/NULL
+(function () {
+  const MAIN_TABLES = new Set(["cruising", "io_sborro", "luogo", "partner", "sega", "sesh", "sex"]);
+
+  // === CONFIG BOOLEAN (attive, non commentare) ===
+  // Valgono OVUNQUE (tabelle + viste)
+  const BOOLEAN_FORCE_GLOBAL = new Set([
+    "droghe_offerte",
+    // aggiungi qui altre colonne booleane: "overdose","mia_iniz","chiacchiere","audio","video", ...
+  ]);
+  // (opzionale) booleane solo per una certa tabella (chiave = nome tabella in minuscolo)
+  const BOOLEAN_FORCE_BY_TABLE = {
+    // "sex": new Set(["overdose"])
+  };
+
+  const TRUE_TOKENS  = new Set(["1","true","✓","✔","✔️","✅"]);
+  const FALSE_TOKENS = new Set(["0","false","✗","✖","✖️","❌",""]);
+  const ISO_LIKE_RE  = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::\d{2})?(?:\.\d+)?(?:Z|[+\-]\d{2}:\d{2})?$/i;
+
+  function ready(fn){ if(document.readyState !== "loading") fn(); else document.addEventListener("DOMContentLoaded", fn); }
+
+  function getCurrentTableName(){
+    try{
+      const parts = location.pathname.split("/").filter(Boolean); // /db/table/...
+      if (parts.length >= 2) return parts[1];
+    }catch(_){}
+    return null;
+  }
+  const CURRENT_TABLE = (getCurrentTableName() || "").toLowerCase();
+
+  function headerNames(table){
+    const hdr = table.querySelector("thead tr"); if(!hdr) return [];
+    const names = [];
+    hdr.querySelectorAll("th").forEach((th,i)=>{
+      let n = th.getAttribute("data-column") || th.textContent.trim();
+      const col = th.querySelector(".col"); if(col) n = col.textContent.trim();
+      names[i] = n;
+    });
+    return names;
+  }
+
+  // Booleani SOLO da liste
+  function isBooleanColumn(name){
+    const n = (name || "").toLowerCase();
+    if (BOOLEAN_FORCE_GLOBAL.has(n)) return true;
+    const perTable = BOOLEAN_FORCE_BY_TABLE[CURRENT_TABLE];
+    return perTable ? perTable.has(n) : false;
+  }
+
+  function normalizeBooleanToken(text){
+    const t = (text||"").trim().toLowerCase();
+    if (TRUE_TOKENS.has(t))  return ["✅","1"];
+    if (FALSE_TOKENS.has(t)) return ["❌","0"];
+    return [text, null];
+  }
+
+  function extractCellValue(td){
+    const a = td.querySelector("a");
+    if (a) return (a.textContent || "").trim();
+    return (td.textContent || "").trim();
+  }
+
+  function extractTableFromHref(href){
+    try{
+      const u = new URL(href, window.location.origin);
+      const parts = u.pathname.split("/").filter(Boolean); // [db, table, id?]
+      if (parts.length >= 2) return parts[1];
+    }catch(_){}
+    return null;
+  }
+
+  // Estrai ID dalla URL (numerico o string/UUID)
+  function extractRowIdFromHref(href){
+    try{
+      const u = new URL(href, window.location.origin);
+      const segs = u.pathname.split("/").filter(Boolean);
+      if (segs.length >= 3) return String(segs[2]);
+      if (u.searchParams.has("id")) return u.searchParams.get("id");
+    }catch(_){}
+    return null;
+  }
+
+  // Individua colonne data (solo per styling; il filtro giorno funziona anche se non marcate)
+  function scanDateColumns(table, names){
+    const tbody = table.querySelector("tbody"); if(!tbody) return new Set();
+    const rows = tbody.querySelectorAll("tr");
+    const cols = names.length;
+    const maxScan = Math.min(rows.length, 200);
+    const counts = Array.from({length: cols}, () => ({match:0,total:0}));
+    for (let r=0; r<maxScan; r++){
+      const tds = rows[r].querySelectorAll("td");
+      for (let i=0; i<Math.min(cols, tds.length); i++){
+        const raw = extractCellValue(tds[i]).trim();
+        if (!raw) continue;
+        counts[i].total++;
+        if (ISO_LIKE_RE.test(raw)) counts[i].match++;
+      }
+    }
+    const dateCols = new Set();
+    for (let i=0;i<cols;i++){
+      if (counts[i].total > 0 && counts[i].match / counts[i].total >= 0.7) dateCols.add(i);
+    }
+    return dateCols;
+  }
+
+  function formatIsoLikeToDdMmYyHm(s){
+    const m = s.match(ISO_LIKE_RE);
+    if (!m) return s;
+    const [_, Y, M, D, h, min] = m;
+    const yy = String(Number(Y)%100).padStart(2,"0");
+    return `${D}-${M}-${yy} ${h}:${min}`;
+  }
+
+  // Estrai YYYY-MM-DD da un timestamp ISO-like; fallback se inizia con YYYY-MM-DD
+  function extractYMD(s){
+    const m = s.match(ISO_LIKE_RE);
+    if (m) return `${m[1]}-${m[2]}-${m[3]}`;
+    if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0,10);
+    return null;
+  }
+
+  // Applica filtro per GIORNO con substr("col",1,10)='YYYY-MM-DD'
+  function applyDayFilter(colName, isoYMD){
+    const url = new URL(window.location.href);
+    url.searchParams.delete(colName);
+    url.searchParams.delete(colName + "__isnull");
+    const colEsc = colName.replace(/"/g, '""');
+    const cond = `substr("${colEsc}",1,10) = '${isoYMD}'`;
+    const existing = url.searchParams.get("_where");
+    if (existing && existing.trim()){
+      url.searchParams.set("_where", `(${existing}) AND ${cond}`);
+    } else {
+      url.searchParams.set("_where", cond);
+    }
+    window.location.assign(url.toString());
+  }
+
+  function applyFilter(col, val, isNull){
+    const url = new URL(window.location.href);
+    url.searchParams.delete(col);
+    url.searchParams.delete(col + "__isnull");
+    if (isNull) url.searchParams.set(col + "__isnull", "1");
+    else        url.searchParams.set(col, val);
+    window.location.assign(url.toString());
+  }
+
+  function enhance(table){
+    const names = headerNames(table);
+    const tbody = table.querySelector("tbody"); if(!tbody) return;
+
+    // Pulizia UI
+    tbody.querySelectorAll("td").forEach(td=>{
+      td.querySelectorAll("em").forEach(em=>em.remove());
+      const links = td.querySelectorAll("a");
+      for (let i=1;i<links.length;i++) links[i].remove();
+    });
+
+    // set colonne booleane (solo liste) + colonne data
+    const boolCols = new Set();
+    names.forEach((n,i)=>{ if (isBooleanColumn(n)) boolCols.add(i); });
+    const dateCols = scanDateColumns(table, names);
+
+    // Metadati + rendering
+    tbody.querySelectorAll("tr").forEach(tr=>{
+      tr.querySelectorAll("td").forEach((td,i)=>{
+        const colNameRaw = (names[i]||"").trim();
+        const col = colNameRaw.toLowerCase();
+        if (!col) return;
+
+        // —— Colonna "link": mostra ➡️, link clickabile, nessun filtro
+        if (["link","_link","url","href"].includes(col)) {
+          const a = td.querySelector("a");
+          if (a) {
+            a.textContent = "➡️";
+            a.setAttribute("aria-label","Apri link");
+            td.classList.add("link-cell");
+          }
+          return;
+        }
+
+        const raw = extractCellValue(td);
+
+        // memorizza FK info (se presente un link)
+        const a = td.querySelector("a");
+        if (a && a.href){
+          const tname = extractTableFromHref(a.href);
+          const rid   = extractRowIdFromHref(a.href);
+          if (tname) td.dataset.fkTargetTable = tname;
+          if (rid)   td.dataset.fkRowId = rid;
+        }
+
+        const isBooleanCol = boolCols.has(i);
+        const isDateCol    = dateCols.has(i);
+
+        let display = raw;
+        let token   = null;
+        let isNullBool = false;
+
+        if (isDateCol && raw){
+          display = formatIsoLikeToDdMmYyHm(raw);
+          td.textContent = display;
+          td.classList.add("is-date");
+          td.dataset.isDate = "1"; // marcatura per click handler
+        } else if (isBooleanCol){
+          let [d,t] = normalizeBooleanToken(raw);
+          if (raw.trim()===""){ d = "❌"; t = "0"; isNullBool = true; }
+          display = (t!==null ? d : raw);
+          token   = (t!==null ? t : raw);
+          td.textContent = display;
+        }
+
+        td.dataset.colName = colNameRaw;
+        td.dataset.filterValue = token!==null ? token : raw; // per le date resta il grezzo
+        td.dataset.isNullBool = (isNullBool ? "1" : "");
+        td.style.cursor = "pointer";
+        if (!td.title) td.title = 'Click to filter by "'+colNameRaw+'"';
+      });
+    });
+
+    // Nascondi colonne (vuote / booleane tutte false)
+    const rows = Array.from(tbody.querySelectorAll("tr"));
+    const hideCols = new Set();
+    for (let i=0;i<names.length;i++){
+      const col = (names[i]||"").trim().toLowerCase();
+      if (!col) continue;
+
+      let allEmpty = true;
+      let allFalseBool = boolCols.has(i);
+
+      for (const tr of rows){
+        const td = tr.querySelectorAll("td")[i];
+        if (!td) continue;
+        const vRaw = (extractCellValue(td) || "").trim();
+        const v = vRaw.toLowerCase();
+        if (vRaw !== "") allEmpty = false;
+        if (boolCols.has(i)){
+          if (v && v !== "0" && v !== "false" && v !== "❌") allFalseBool = false;
+        }
+      }
+      if (allEmpty || allFalseBool) hideCols.add(i);
+    }
+    if (hideCols.size){
+      const ths = table.querySelectorAll("thead tr th");
+      ths.forEach((th,i)=>{ if (dateCols.has(i)) th.classList.add("is-date"); if (hideCols.has(i)) th.style.display="none"; });
+      rows.forEach(tr=>{ tr.querySelectorAll("td").forEach((td,i)=>{ if (hideCols.has(i)) td.style.display="none"; }); });
+    } else {
+      const ths = table.querySelectorAll("thead tr th");
+      ths.forEach((th,i)=>{ if (dateCols.has(i)) th.classList.add("is-date"); });
+    }
+
+    // Click handler
+    table.addEventListener("click", function(e){
+      const td = e.target.closest("td"); if(!td) return;
+      const tr = td.closest("tr"); if (!tr || tr.parentElement.tagName.toLowerCase()!=="tbody") return;
+
+      // Non fare nulla sulle celle della colonna link
+      if (td.classList.contains("link-cell")) return;
+
+      const colName = td.dataset.colName;
+      if (!colName || colName.toLowerCase()==="link") return;
+
+      // evita conflitto con selezione testo reale
+      const sel = (window.getSelection && window.getSelection()) ? window.getSelection().toString() : "";
+      if (sel) return;
+
+      // PRIORITÀ: se la cella è (o contiene) un timestamp → filtro per giorno
+      const rawForDate = td.dataset.filterValue || extractCellValue(td);
+      if (td.dataset.isDate === "1" || ISO_LIKE_RE.test(rawForDate)) {
+        const ymd = extractYMD(rawForDate);
+        if (ymd) { applyDayFilter(colName, ymd); return; }
+      }
+
+      const a = td.querySelector("a");
+      const fkTable = td.dataset.fkTargetTable || (a && extractTableFromHref(a.href));
+      const fkId    = td.dataset.fkRowId || (a && extractRowIdFromHref(a.href));
+
+      // MAIN: nav sempre
+      if (a && fkTable && MAIN_TABLES.has(fkTable)) {
+        if (!e.target.closest("a")) { window.location.assign(a.href); e.preventDefault(); e.stopPropagation(); }
+        return;
+      }
+      // LOOKUP: filtra con ID reale
+      if (a && fkTable && !MAIN_TABLES.has(fkTable)) {
+        e.preventDefault(); e.stopPropagation();
+        const isNull = td.dataset.isNullBool === "1";
+        const val = fkId || td.dataset.filterValue || extractCellValue(td);
+        if (!val && !isNull) return;
+        applyFilter(colName, val, isNull);
+        return;
+      }
+      // Nessun link: filtra con valore grezzo o __isnull
+      const isNull = td.dataset.isNullBool === "1";
+      const val = td.dataset.filterValue || extractCellValue(td);
+      if (!val && !isNull) return;
+      applyFilter(colName, val, isNull);
+    }, {passive:false});
+  }
+
+  function boot(){ document.querySelectorAll("table").forEach(enhance); }
+  ready(boot);
+})();
+
+// Hide "CREATE TABLE" schema block below tables
+document.addEventListener("DOMContentLoaded", () => {
+  document.querySelectorAll("pre").forEach(pre => {
+    const text = pre.textContent.trim();
+    if (text.startsWith("CREATE TABLE")) {
+      pre.style.display = "none";
+      const prev = pre.previousElementSibling;
+      if (prev && prev.tagName === "H3") prev.style.display = "none";
+    }
+  });
+});

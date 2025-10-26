@@ -1,0 +1,30 @@
+
+/* date_range_filter.css */
+.date-range-bar{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  padding:10px 12px;
+  margin:8px 0 12px 0;
+  border:1px solid rgba(0,0,0,.08);
+  border-radius:12px;
+}
+.date-range-bar .date-row{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  align-items:center;
+}
+.date-range-bar label{ font-size:14px; }
+.date-range-bar input[type="date"]{
+  padding:6px 8px;
+  border-radius:8px;
+  border:1px solid rgba(0,0,0,.2);
+}
+.date-range-bar button{
+  padding:6px 10px;
+  border-radius:10px;
+  border:1px solid rgba(0,0,0,.15);
+  cursor:pointer;
+}
+.date-range-bar .date-hint{ font-size:12px; opacity:.7; }

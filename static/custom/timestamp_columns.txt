@@ -1,0 +1,9 @@
+# timestamp_columns.txt
+# Lines format (case-insensitive):
+#   <table_name>: <col_pattern1>, <col_pattern2>, ...
+# Wildcards allowed: * (e.g., *_at, *_timestamp, start_*, *date*)
+# Special table name '*' applies to ALL tables.
+#
+# Examples below cover your current use-cases.
+sex: inizio, fine
+*: *_at, *_timestamp, *_time, *_date, inizio, fine

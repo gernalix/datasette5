@@ -1,0 +1,695 @@
+==== Datasette HTTPS launcher at 26/10/2025  6:47:32,28 ==== 
+Working dir: Z:\download\datasette5 
+[OK] Found asset: "static\custom\format_overrides.js" 
+[OK] Found asset: "static\custom\format_overrides.css" 
+[OK] Found asset: "templates\base.html" 
+[INFO] Plugins dir not found; continuing without it. 
+[INFO] metadata.json not found; continuing without it. 
+[OK] Using templates dir: "templates" 
+[OK] Serving static custom: "static\custom" 
+[OK] HTTPS enabled. 
+Running: datasette "output.db" --host 0.0.0.0 --port 8001 --ssl-certfile "C:\Users\seste\daniele.tail6b4058.ts.net.crt" --ssl-keyfile "C:\Users\seste\daniele.tail6b4058.ts.net.key" --template-dir "templates" --static custom:"static\custom"   
+C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\site-packages\datasette\app.py:14: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
+  import pkg_resources
+INFO:     Started server process [5004]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on https://0.0.0.0:8001 (Press CTRL+C to quit)
+INFO:     100.126.19.77:64140 - "GET /output/sex HTTP/1.1" 200 OK
+INFO:     100.126.19.77:64140 - "GET /-/static/app.css?d59929 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:65120 - "GET /-/static/app.css HTTP/1.1" 200 OK
+INFO:     100.126.19.77:58933 - "GET /custom/styles.css?v=4 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:57137 - "GET /custom/desktop.css?v=4 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:57137 - "GET /custom/formatting.js?v=4 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:65120 - "GET /custom/fix_links.js?v=5 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:58933 - "GET /custom/click_to_filter.js?v=4 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:64140 - "GET /custom/map_overlay.js?v=2 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:57137 - "GET /custom/timestamp_calendar_button.js?v=1 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:65120 - "GET /custom/timestamp_autosize_config.js HTTP/1.1" 200 OK
+INFO:     100.126.19.77:62638 - "GET /-/static/table.js HTTP/1.1" 200 OK
+INFO:     100.126.19.77:49789 - "GET /custom/mobile.css?v=4 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:49789 - "GET /custom/timestamp_columns.txt HTTP/1.1" 200 OK
+INFO:     100.126.19.77:62638 - "GET /custom/map_overlay.css HTTP/1.1" 200 OK
+INFO:     100.126.19.77:62638 - "GET /custom/timestamp_columns.txt HTTP/1.1" 200 OK
+INFO:     100.126.19.77:62638 - "GET /output/sex.json?_shape=objects&_size=max HTTP/1.1" 200 OK
+INFO:     100.126.19.77:62638 - "GET /output/luogo.json?_shape=objects&_size=max&_where=id+in+%284%2C5%29 HTTP/1.1" 200 OK
+Exception in callback _ProactorBasePipeTransport._call_connection_lost()
+handle: <Handle _ProactorBasePipeTransport._call_connection_lost()>
+Traceback (most recent call last):
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\events.py", line 89, in _run
+    self._context.run(self._callback, *self._args)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\proactor_events.py", line 165, in _call_connection_lost
+    self._sock.shutdown(socket.SHUT_RDWR)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+ConnectionResetError: [WinError 10054] An existing connection was forcibly closed by the remote host
+Exception in callback _ProactorBasePipeTransport._call_connection_lost()
+handle: <Handle _ProactorBasePipeTransport._call_connection_lost()>
+Traceback (most recent call last):
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\events.py", line 89, in _run
+    self._context.run(self._callback, *self._args)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\proactor_events.py", line 165, in _call_connection_lost
+    self._sock.shutdown(socket.SHUT_RDWR)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+ConnectionResetError: [WinError 10054] An existing connection was forcibly closed by the remote host
+Exception in callback _ProactorBasePipeTransport._call_connection_lost()
+handle: <Handle _ProactorBasePipeTransport._call_connection_lost()>
+Traceback (most recent call last):
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\events.py", line 89, in _run
+    self._context.run(self._callback, *self._args)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\proactor_events.py", line 165, in _call_connection_lost
+    self._sock.shutdown(socket.SHUT_RDWR)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+ConnectionResetError: [WinError 10054] An existing connection was forcibly closed by the remote host
+Exception in callback _ProactorBasePipeTransport._call_connection_lost()
+handle: <Handle _ProactorBasePipeTransport._call_connection_lost()>
+Traceback (most recent call last):
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\events.py", line 89, in _run
+    self._context.run(self._callback, *self._args)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\proactor_events.py", line 165, in _call_connection_lost
+    self._sock.shutdown(socket.SHUT_RDWR)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+ConnectionResetError: [WinError 10054] An existing connection was forcibly closed by the remote host
+Exception in callback _ProactorBasePipeTransport._call_connection_lost()
+handle: <Handle _ProactorBasePipeTransport._call_connection_lost()>
+Traceback (most recent call last):
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\events.py", line 89, in _run
+    self._context.run(self._callback, *self._args)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\proactor_events.py", line 165, in _call_connection_lost
+    self._sock.shutdown(socket.SHUT_RDWR)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+ConnectionResetError: [WinError 10054] An existing connection was forcibly closed by the remote host
+Exception in callback _ProactorBasePipeTransport._call_connection_lost()
+handle: <Handle _ProactorBasePipeTransport._call_connection_lost()>
+Traceback (most recent call last):
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\events.py", line 89, in _run
+    self._context.run(self._callback, *self._args)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\proactor_events.py", line 165, in _call_connection_lost
+    self._sock.shutdown(socket.SHUT_RDWR)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+ConnectionResetError: [WinError 10054] An existing connection was forcibly closed by the remote host
+INFO:     100.126.19.77:57892 - "GET /output/sex?interrotto_id=1 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:57892 - "GET /-/static/app.css?d59929 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:59455 - "GET /-/static/app.css HTTP/1.1" 200 OK
+INFO:     100.126.19.77:54567 - "GET /custom/styles.css?v=4 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:62915 - "GET /custom/desktop.css?v=4 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:62915 - "GET /custom/formatting.js?v=4 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:54567 - "GET /custom/fix_links.js?v=5 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:59455 - "GET /custom/click_to_filter.js?v=4 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:57892 - "GET /custom/timestamp_calendar_button.js?v=1 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:50439 - "GET /custom/timestamp_autosize_config.js HTTP/1.1" 200 OK
+INFO:     100.126.19.77:64676 - "GET /custom/map_overlay.js?v=2 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:62915 - "GET /-/static/table.js HTTP/1.1" 200 OK
+INFO:     100.126.19.77:57892 - "GET /custom/mobile.css?v=4 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:57892 - "GET /custom/timestamp_columns.txt HTTP/1.1" 200 OK
+INFO:     100.126.19.77:62915 - "GET /custom/map_overlay.css HTTP/1.1" 200 OK
+INFO:     100.126.19.77:62915 - "GET /custom/timestamp_columns.txt HTTP/1.1" 200 OK
+Exception in callback _ProactorBasePipeTransport._call_connection_lost()
+handle: <Handle _ProactorBasePipeTransport._call_connection_lost()>
+Traceback (most recent call last):
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\events.py", line 89, in _run
+    self._context.run(self._callback, *self._args)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\proactor_events.py", line 165, in _call_connection_lost
+    self._sock.shutdown(socket.SHUT_RDWR)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+ConnectionResetError: [WinError 10054] An existing connection was forcibly closed by the remote host
+Exception in callback _ProactorBasePipeTransport._call_connection_lost()
+handle: <Handle _ProactorBasePipeTransport._call_connection_lost()>
+Traceback (most recent call last):
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\events.py", line 89, in _run
+    self._context.run(self._callback, *self._args)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\proactor_events.py", line 165, in _call_connection_lost
+    self._sock.shutdown(socket.SHUT_RDWR)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+ConnectionResetError: [WinError 10054] An existing connection was forcibly closed by the remote host
+Exception in callback _ProactorBasePipeTransport._call_connection_lost()
+handle: <Handle _ProactorBasePipeTransport._call_connection_lost()>
+Traceback (most recent call last):
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\events.py", line 89, in _run
+    self._context.run(self._callback, *self._args)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\proactor_events.py", line 165, in _call_connection_lost
+    self._sock.shutdown(socket.SHUT_RDWR)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+ConnectionResetError: [WinError 10054] An existing connection was forcibly closed by the remote host
+Exception in callback _ProactorBasePipeTransport._call_connection_lost()
+handle: <Handle _ProactorBasePipeTransport._call_connection_lost()>
+Traceback (most recent call last):
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\events.py", line 89, in _run
+    self._context.run(self._callback, *self._args)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\proactor_events.py", line 165, in _call_connection_lost
+    self._sock.shutdown(socket.SHUT_RDWR)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+ConnectionResetError: [WinError 10054] An existing connection was forcibly closed by the remote host
+Exception in callback _ProactorBasePipeTransport._call_connection_lost()
+handle: <Handle _ProactorBasePipeTransport._call_connection_lost()>
+Traceback (most recent call last):
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\events.py", line 89, in _run
+    self._context.run(self._callback, *self._args)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\proactor_events.py", line 165, in _call_connection_lost
+    self._sock.shutdown(socket.SHUT_RDWR)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+ConnectionResetError: [WinError 10054] An existing connection was forcibly closed by the remote host
+Exception in callback _ProactorBasePipeTransport._call_connection_lost()
+handle: <Handle _ProactorBasePipeTransport._call_connection_lost()>
+Traceback (most recent call last):
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\events.py", line 89, in _run
+    self._context.run(self._callback, *self._args)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\proactor_events.py", line 165, in _call_connection_lost
+    self._sock.shutdown(socket.SHUT_RDWR)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+ConnectionResetError: [WinError 10054] An existing connection was forcibly closed by the remote host
+INFO:     100.126.19.77:60376 - "GET /output/sex?interrotto_id=1&luogo_id=4 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:60376 - "GET /-/static/app.css?d59929 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:51953 - "GET /-/static/app.css HTTP/1.1" 200 OK
+INFO:     100.126.19.77:61430 - "GET /custom/styles.css?v=4 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:63781 - "GET /custom/desktop.css?v=4 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:63781 - "GET /custom/formatting.js?v=4 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:51953 - "GET /custom/fix_links.js?v=5 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:61430 - "GET /custom/click_to_filter.js?v=4 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:60376 - "GET /custom/timestamp_calendar_button.js?v=1 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:63781 - "GET /custom/map_overlay.js?v=2 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:52813 - "GET /custom/timestamp_autosize_config.js HTTP/1.1" 200 OK
+INFO:     100.126.19.77:51953 - "GET /custom/mobile.css?v=4 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:50183 - "GET /-/static/table.js HTTP/1.1" 200 OK
+INFO:     100.126.19.77:51953 - "GET /custom/timestamp_columns.txt HTTP/1.1" 200 OK
+INFO:     100.126.19.77:50183 - "GET /custom/map_overlay.css HTTP/1.1" 200 OK
+INFO:     100.126.19.77:50183 - "GET /custom/timestamp_columns.txt HTTP/1.1" 200 OK
+Exception in callback _ProactorBasePipeTransport._call_connection_lost()
+handle: <Handle _ProactorBasePipeTransport._call_connection_lost()>
+Traceback (most recent call last):
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\events.py", line 89, in _run
+    self._context.run(self._callback, *self._args)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\proactor_events.py", line 165, in _call_connection_lost
+    self._sock.shutdown(socket.SHUT_RDWR)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+ConnectionResetError: [WinError 10054] An existing connection was forcibly closed by the remote host
+Exception in callback _ProactorBasePipeTransport._call_connection_lost()
+handle: <Handle _ProactorBasePipeTransport._call_connection_lost()>
+Traceback (most recent call last):
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\events.py", line 89, in _run
+    self._context.run(self._callback, *self._args)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\proactor_events.py", line 165, in _call_connection_lost
+    self._sock.shutdown(socket.SHUT_RDWR)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+ConnectionResetError: [WinError 10054] An existing connection was forcibly closed by the remote host
+Exception in callback _ProactorBasePipeTransport._call_connection_lost()
+handle: <Handle _ProactorBasePipeTransport._call_connection_lost()>
+Traceback (most recent call last):
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\events.py", line 89, in _run
+    self._context.run(self._callback, *self._args)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\proactor_events.py", line 165, in _call_connection_lost
+    self._sock.shutdown(socket.SHUT_RDWR)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+ConnectionResetError: [WinError 10054] An existing connection was forcibly closed by the remote host
+Exception in callback _ProactorBasePipeTransport._call_connection_lost()
+handle: <Handle _ProactorBasePipeTransport._call_connection_lost()>
+Traceback (most recent call last):
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\events.py", line 89, in _run
+    self._context.run(self._callback, *self._args)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\proactor_events.py", line 165, in _call_connection_lost
+    self._sock.shutdown(socket.SHUT_RDWR)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+ConnectionResetError: [WinError 10054] An existing connection was forcibly closed by the remote host
+Exception in callback _ProactorBasePipeTransport._call_connection_lost()
+handle: <Handle _ProactorBasePipeTransport._call_connection_lost()>
+Traceback (most recent call last):
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\events.py", line 89, in _run
+    self._context.run(self._callback, *self._args)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\proactor_events.py", line 165, in _call_connection_lost
+    self._sock.shutdown(socket.SHUT_RDWR)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+ConnectionResetError: [WinError 10054] An existing connection was forcibly closed by the remote host
+Exception in callback _ProactorBasePipeTransport._call_connection_lost()
+handle: <Handle _ProactorBasePipeTransport._call_connection_lost()>
+Traceback (most recent call last):
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\events.py", line 89, in _run
+    self._context.run(self._callback, *self._args)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\proactor_events.py", line 165, in _call_connection_lost
+    self._sock.shutdown(socket.SHUT_RDWR)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+ConnectionResetError: [WinError 10054] An existing connection was forcibly closed by the remote host
+INFO:     100.126.19.77:49284 - "GET /output/sex.json?interrotto_id=1&luogo_id=4&_shape=objects&_size=max HTTP/1.1" 200 OK
+INFO:     100.126.19.77:49284 - "GET /output/luogo.json?_shape=objects&_size=max&_where=id+in+%284%29 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:49284 - "GET / HTTP/1.1" 200 OK
+INFO:     100.126.19.77:49284 - "GET /-/static/app.css?d59929 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:50389 - "GET /-/static/app.css HTTP/1.1" 200 OK
+INFO:     100.126.19.77:49284 - "GET /custom/styles.css?v=4 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:53013 - "GET /custom/desktop.css?v=4 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:60136 - "GET /custom/formatting.js?v=4 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:58814 - "GET /custom/fix_links.js?v=5 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:62926 - "GET /custom/click_to_filter.js?v=4 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:50389 - "GET /custom/timestamp_calendar_button.js?v=1 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:49284 - "GET /custom/timestamp_autosize_config.js HTTP/1.1" 200 OK
+INFO:     100.126.19.77:53013 - "GET /custom/mobile.css?v=4 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:60136 - "GET /custom/map_overlay.js?v=2 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:60136 - "GET /output/sex HTTP/1.1" 200 OK
+INFO:     100.126.19.77:60136 - "GET /-/static/app.css?d59929 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:62926 - "GET /-/static/app.css HTTP/1.1" 200 OK
+INFO:     100.126.19.77:53013 - "GET /custom/styles.css?v=4 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:49284 - "GET /custom/desktop.css?v=4 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:62926 - "GET /custom/formatting.js?v=4 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:49284 - "GET /custom/click_to_filter.js?v=4 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:60136 - "GET /custom/fix_links.js?v=5 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:53013 - "GET /custom/timestamp_calendar_button.js?v=1 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:50389 - "GET /custom/timestamp_autosize_config.js HTTP/1.1" 200 OK
+INFO:     100.126.19.77:58814 - "GET /custom/map_overlay.js?v=2 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:62926 - "GET /-/static/table.js HTTP/1.1" 200 OK
+INFO:     100.126.19.77:53013 - "GET /custom/mobile.css?v=4 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:62926 - "GET /custom/timestamp_columns.txt HTTP/1.1" 200 OK
+INFO:     100.126.19.77:53013 - "GET /custom/map_overlay.css HTTP/1.1" 200 OK
+INFO:     100.126.19.77:53013 - "GET /custom/timestamp_columns.txt HTTP/1.1" 200 OK
+Exception in callback _ProactorBasePipeTransport._call_connection_lost()
+handle: <Handle _ProactorBasePipeTransport._call_connection_lost()>
+Traceback (most recent call last):
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\events.py", line 89, in _run
+    self._context.run(self._callback, *self._args)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\proactor_events.py", line 165, in _call_connection_lost
+    self._sock.shutdown(socket.SHUT_RDWR)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+ConnectionResetError: [WinError 10054] An existing connection was forcibly closed by the remote host
+Exception in callback _ProactorBasePipeTransport._call_connection_lost()
+handle: <Handle _ProactorBasePipeTransport._call_connection_lost()>
+Traceback (most recent call last):
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\events.py", line 89, in _run
+    self._context.run(self._callback, *self._args)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\proactor_events.py", line 165, in _call_connection_lost
+    self._sock.shutdown(socket.SHUT_RDWR)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+ConnectionResetError: [WinError 10054] An existing connection was forcibly closed by the remote host
+Exception in callback _ProactorBasePipeTransport._call_connection_lost()
+handle: <Handle _ProactorBasePipeTransport._call_connection_lost()>
+Traceback (most recent call last):
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\events.py", line 89, in _run
+    self._context.run(self._callback, *self._args)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\proactor_events.py", line 165, in _call_connection_lost
+    self._sock.shutdown(socket.SHUT_RDWR)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+ConnectionResetError: [WinError 10054] An existing connection was forcibly closed by the remote host
+Exception in callback _ProactorBasePipeTransport._call_connection_lost()
+handle: <Handle _ProactorBasePipeTransport._call_connection_lost()>
+Traceback (most recent call last):
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\events.py", line 89, in _run
+    self._context.run(self._callback, *self._args)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\proactor_events.py", line 165, in _call_connection_lost
+    self._sock.shutdown(socket.SHUT_RDWR)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+ConnectionResetError: [WinError 10054] An existing connection was forcibly closed by the remote host
+Exception in callback _ProactorBasePipeTransport._call_connection_lost()
+handle: <Handle _ProactorBasePipeTransport._call_connection_lost()>
+Traceback (most recent call last):
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\events.py", line 89, in _run
+    self._context.run(self._callback, *self._args)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\proactor_events.py", line 165, in _call_connection_lost
+    self._sock.shutdown(socket.SHUT_RDWR)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+ConnectionResetError: [WinError 10054] An existing connection was forcibly closed by the remote host
+Exception in callback _ProactorBasePipeTransport._call_connection_lost()
+handle: <Handle _ProactorBasePipeTransport._call_connection_lost()>
+Traceback (most recent call last):
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\events.py", line 89, in _run
+    self._context.run(self._callback, *self._args)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\proactor_events.py", line 165, in _call_connection_lost
+    self._sock.shutdown(socket.SHUT_RDWR)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+ConnectionResetError: [WinError 10054] An existing connection was forcibly closed by the remote host
+INFO:     100.126.19.77:64103 - "GET / HTTP/1.1" 200 OK
+INFO:     100.126.19.77:64103 - "GET /-/static/app.css?d59929 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:50193 - "GET /-/static/app.css HTTP/1.1" 200 OK
+INFO:     100.126.19.77:64103 - "GET /custom/styles.css?v=4 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:56491 - "GET /custom/desktop.css?v=4 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:63392 - "GET /custom/formatting.js?v=4 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:63753 - "GET /custom/fix_links.js?v=5 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:54996 - "GET /custom/click_to_filter.js?v=4 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:56491 - "GET /custom/timestamp_calendar_button.js?v=1 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:50193 - "GET /custom/map_overlay.js?v=2 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:64103 - "GET /custom/timestamp_autosize_config.js HTTP/1.1" 200 OK
+INFO:     100.126.19.77:63392 - "GET /custom/mobile.css?v=4 HTTP/1.1" 200 OK
+Exception in callback _ProactorBasePipeTransport._call_connection_lost()
+handle: <Handle _ProactorBasePipeTransport._call_connection_lost()>
+Traceback (most recent call last):
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\events.py", line 89, in _run
+    self._context.run(self._callback, *self._args)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\proactor_events.py", line 165, in _call_connection_lost
+    self._sock.shutdown(socket.SHUT_RDWR)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+ConnectionResetError: [WinError 10054] An existing connection was forcibly closed by the remote host
+Exception in callback _ProactorBasePipeTransport._call_connection_lost()
+handle: <Handle _ProactorBasePipeTransport._call_connection_lost()>
+Traceback (most recent call last):
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\events.py", line 89, in _run
+    self._context.run(self._callback, *self._args)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\proactor_events.py", line 165, in _call_connection_lost
+    self._sock.shutdown(socket.SHUT_RDWR)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+ConnectionResetError: [WinError 10054] An existing connection was forcibly closed by the remote host
+Exception in callback _ProactorBasePipeTransport._call_connection_lost()
+handle: <Handle _ProactorBasePipeTransport._call_connection_lost()>
+Traceback (most recent call last):
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\events.py", line 89, in _run
+    self._context.run(self._callback, *self._args)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\proactor_events.py", line 165, in _call_connection_lost
+    self._sock.shutdown(socket.SHUT_RDWR)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+ConnectionResetError: [WinError 10054] An existing connection was forcibly closed by the remote host
+Exception in callback _ProactorBasePipeTransport._call_connection_lost()
+handle: <Handle _ProactorBasePipeTransport._call_connection_lost()>
+Traceback (most recent call last):
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\events.py", line 89, in _run
+    self._context.run(self._callback, *self._args)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\proactor_events.py", line 165, in _call_connection_lost
+    self._sock.shutdown(socket.SHUT_RDWR)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+ConnectionResetError: [WinError 10054] An existing connection was forcibly closed by the remote host
+Exception in callback _ProactorBasePipeTransport._call_connection_lost()
+handle: <Handle _ProactorBasePipeTransport._call_connection_lost()>
+Traceback (most recent call last):
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\events.py", line 89, in _run
+    self._context.run(self._callback, *self._args)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\proactor_events.py", line 165, in _call_connection_lost
+    self._sock.shutdown(socket.SHUT_RDWR)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+ConnectionResetError: [WinError 10054] An existing connection was forcibly closed by the remote host
+Exception in callback _ProactorBasePipeTransport._call_connection_lost()
+handle: <Handle _ProactorBasePipeTransport._call_connection_lost()>
+Traceback (most recent call last):
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\events.py", line 89, in _run
+    self._context.run(self._callback, *self._args)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\proactor_events.py", line 165, in _call_connection_lost
+    self._sock.shutdown(socket.SHUT_RDWR)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+ConnectionResetError: [WinError 10054] An existing connection was forcibly closed by the remote host
+INFO:     100.126.19.77:60716 - "GET /output/calendar_range HTTP/1.1" 200 OK
+INFO:     100.126.19.77:60716 - "GET /-/static/app.css?d59929 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:57128 - "GET /-/static/app.css HTTP/1.1" 200 OK
+INFO:     100.126.19.77:52043 - "GET /custom/styles.css?v=4 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:57128 - "GET /custom/desktop.css?v=4 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:60716 - "GET /custom/formatting.js?v=4 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:57128 - "GET /custom/fix_links.js?v=5 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:52043 - "GET /custom/click_to_filter.js?v=4 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:60716 - "GET /custom/timestamp_calendar_button.js?v=1 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:60716 - "GET /custom/timestamp_autosize_config.js HTTP/1.1" 200 OK
+INFO:     100.126.19.77:57128 - "GET /custom/map_overlay.js?v=2 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:60716 - "GET /custom/timestamp_columns.txt HTTP/1.1" 200 OK
+INFO:     100.126.19.77:60716 - "GET /-/static/table.js HTTP/1.1" 200 OK
+INFO:     100.126.19.77:52043 - "GET /custom/mobile.css?v=4 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:60716 - "GET /custom/timestamp_columns.txt HTTP/1.1" 200 OK
+Exception in callback _ProactorBasePipeTransport._call_connection_lost()
+handle: <Handle _ProactorBasePipeTransport._call_connection_lost()>
+Traceback (most recent call last):
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\events.py", line 89, in _run
+    self._context.run(self._callback, *self._args)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\proactor_events.py", line 165, in _call_connection_lost
+    self._sock.shutdown(socket.SHUT_RDWR)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+ConnectionResetError: [WinError 10054] An existing connection was forcibly closed by the remote host
+Exception in callback _ProactorBasePipeTransport._call_connection_lost()
+handle: <Handle _ProactorBasePipeTransport._call_connection_lost()>
+Traceback (most recent call last):
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\events.py", line 89, in _run
+    self._context.run(self._callback, *self._args)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\proactor_events.py", line 165, in _call_connection_lost
+    self._sock.shutdown(socket.SHUT_RDWR)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+ConnectionResetError: [WinError 10054] An existing connection was forcibly closed by the remote host
+Exception in callback _ProactorBasePipeTransport._call_connection_lost()
+handle: <Handle _ProactorBasePipeTransport._call_connection_lost()>
+Traceback (most recent call last):
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\events.py", line 89, in _run
+    self._context.run(self._callback, *self._args)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\proactor_events.py", line 165, in _call_connection_lost
+    self._sock.shutdown(socket.SHUT_RDWR)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+ConnectionResetError: [WinError 10054] An existing connection was forcibly closed by the remote host
+INFO:     100.126.19.77:54055 - "GET /output/calendar_range HTTP/1.1" 200 OK
+INFO:     100.126.19.77:54055 - "GET /-/static/app.css?d59929 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:51472 - "GET /-/static/app.css HTTP/1.1" 200 OK
+INFO:     100.126.19.77:49989 - "GET /custom/styles.css?v=4 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:51149 - "GET /custom/desktop.css?v=4 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:51149 - "GET /custom/formatting.js?v=4 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:51472 - "GET /custom/fix_links.js?v=5 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:54055 - "GET /custom/click_to_filter.js?v=4 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:49989 - "GET /custom/timestamp_calendar_button.js?v=1 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:51149 - "GET /custom/timestamp_autosize_config.js HTTP/1.1" 200 OK
+INFO:     100.126.19.77:60098 - "GET /custom/map_overlay.js?v=2 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:51472 - "GET /-/static/table.js HTTP/1.1" 200 OK
+INFO:     100.126.19.77:50121 - "GET /custom/mobile.css?v=4 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:51472 - "GET /custom/timestamp_columns.txt HTTP/1.1" 200 OK
+INFO:     100.126.19.77:51472 - "GET /custom/timestamp_columns.txt HTTP/1.1" 200 OK
+Exception in callback _ProactorBasePipeTransport._call_connection_lost()
+handle: <Handle _ProactorBasePipeTransport._call_connection_lost()>
+Traceback (most recent call last):
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\events.py", line 89, in _run
+    self._context.run(self._callback, *self._args)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\proactor_events.py", line 165, in _call_connection_lost
+    self._sock.shutdown(socket.SHUT_RDWR)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+ConnectionResetError: [WinError 10054] An existing connection was forcibly closed by the remote host
+Exception in callback _ProactorBasePipeTransport._call_connection_lost()
+handle: <Handle _ProactorBasePipeTransport._call_connection_lost()>
+Traceback (most recent call last):
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\events.py", line 89, in _run
+    self._context.run(self._callback, *self._args)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\proactor_events.py", line 165, in _call_connection_lost
+    self._sock.shutdown(socket.SHUT_RDWR)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+ConnectionResetError: [WinError 10054] An existing connection was forcibly closed by the remote host
+Exception in callback _ProactorBasePipeTransport._call_connection_lost()
+handle: <Handle _ProactorBasePipeTransport._call_connection_lost()>
+Traceback (most recent call last):
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\events.py", line 89, in _run
+    self._context.run(self._callback, *self._args)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\proactor_events.py", line 165, in _call_connection_lost
+    self._sock.shutdown(socket.SHUT_RDWR)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+ConnectionResetError: [WinError 10054] An existing connection was forcibly closed by the remote host
+Exception in callback _ProactorBasePipeTransport._call_connection_lost()
+handle: <Handle _ProactorBasePipeTransport._call_connection_lost()>
+Traceback (most recent call last):
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\events.py", line 89, in _run
+    self._context.run(self._callback, *self._args)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\proactor_events.py", line 165, in _call_connection_lost
+    self._sock.shutdown(socket.SHUT_RDWR)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+ConnectionResetError: [WinError 10054] An existing connection was forcibly closed by the remote host
+Exception in callback _ProactorBasePipeTransport._call_connection_lost()
+handle: <Handle _ProactorBasePipeTransport._call_connection_lost()>
+Traceback (most recent call last):
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\events.py", line 89, in _run
+    self._context.run(self._callback, *self._args)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\proactor_events.py", line 165, in _call_connection_lost
+    self._sock.shutdown(socket.SHUT_RDWR)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+ConnectionResetError: [WinError 10054] An existing connection was forcibly closed by the remote host
+Exception in callback _ProactorBasePipeTransport._call_connection_lost()
+handle: <Handle _ProactorBasePipeTransport._call_connection_lost()>
+Traceback (most recent call last):
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\events.py", line 89, in _run
+    self._context.run(self._callback, *self._args)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\proactor_events.py", line 165, in _call_connection_lost
+    self._sock.shutdown(socket.SHUT_RDWR)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+ConnectionResetError: [WinError 10054] An existing connection was forcibly closed by the remote host
+INFO:     100.126.19.77:65124 - "GET /output/ex_super HTTP/1.1" 200 OK
+INFO:     100.126.19.77:65124 - "GET /-/static/app.css?d59929 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:62218 - "GET /-/static/app.css HTTP/1.1" 200 OK
+INFO:     100.126.19.77:65124 - "GET /custom/desktop.css?v=4 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:54628 - "GET /custom/styles.css?v=4 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:54628 - "GET /custom/formatting.js?v=4 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:62218 - "GET /custom/fix_links.js?v=5 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:64016 - "GET /custom/timestamp_calendar_button.js?v=1 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:65124 - "GET /custom/click_to_filter.js?v=4 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:54628 - "GET /custom/timestamp_autosize_config.js HTTP/1.1" 200 OK
+INFO:     100.126.19.77:51377 - "GET /custom/map_overlay.js?v=2 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:64146 - "GET /-/static/table.js HTTP/1.1" 200 OK
+INFO:     100.126.19.77:62218 - "GET /custom/mobile.css?v=4 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:64146 - "GET /custom/timestamp_columns.txt HTTP/1.1" 200 OK
+INFO:     100.126.19.77:62218 - "GET /custom/map_overlay.css HTTP/1.1" 200 OK
+INFO:     100.126.19.77:62218 - "GET /custom/timestamp_columns.txt HTTP/1.1" 200 OK
+Exception in callback _ProactorBasePipeTransport._call_connection_lost()
+handle: <Handle _ProactorBasePipeTransport._call_connection_lost()>
+Traceback (most recent call last):
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\events.py", line 89, in _run
+    self._context.run(self._callback, *self._args)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\proactor_events.py", line 165, in _call_connection_lost
+    self._sock.shutdown(socket.SHUT_RDWR)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+ConnectionResetError: [WinError 10054] An existing connection was forcibly closed by the remote host
+Exception in callback _ProactorBasePipeTransport._call_connection_lost()
+handle: <Handle _ProactorBasePipeTransport._call_connection_lost()>
+Traceback (most recent call last):
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\events.py", line 89, in _run
+    self._context.run(self._callback, *self._args)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\proactor_events.py", line 165, in _call_connection_lost
+    self._sock.shutdown(socket.SHUT_RDWR)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+ConnectionResetError: [WinError 10054] An existing connection was forcibly closed by the remote host
+Exception in callback _ProactorBasePipeTransport._call_connection_lost()
+handle: <Handle _ProactorBasePipeTransport._call_connection_lost()>
+Traceback (most recent call last):
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\events.py", line 89, in _run
+    self._context.run(self._callback, *self._args)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\proactor_events.py", line 165, in _call_connection_lost
+    self._sock.shutdown(socket.SHUT_RDWR)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+ConnectionResetError: [WinError 10054] An existing connection was forcibly closed by the remote host
+Exception in callback _ProactorBasePipeTransport._call_connection_lost()
+handle: <Handle _ProactorBasePipeTransport._call_connection_lost()>
+Traceback (most recent call last):
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\events.py", line 89, in _run
+    self._context.run(self._callback, *self._args)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\proactor_events.py", line 165, in _call_connection_lost
+    self._sock.shutdown(socket.SHUT_RDWR)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+ConnectionResetError: [WinError 10054] An existing connection was forcibly closed by the remote host
+Exception in callback _ProactorBasePipeTransport._call_connection_lost()
+handle: <Handle _ProactorBasePipeTransport._call_connection_lost()>
+Traceback (most recent call last):
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\events.py", line 89, in _run
+    self._context.run(self._callback, *self._args)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\proactor_events.py", line 165, in _call_connection_lost
+    self._sock.shutdown(socket.SHUT_RDWR)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+ConnectionResetError: [WinError 10054] An existing connection was forcibly closed by the remote host
+Exception in callback _ProactorBasePipeTransport._call_connection_lost()
+handle: <Handle _ProactorBasePipeTransport._call_connection_lost()>
+Traceback (most recent call last):
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\events.py", line 89, in _run
+    self._context.run(self._callback, *self._args)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\proactor_events.py", line 165, in _call_connection_lost
+    self._sock.shutdown(socket.SHUT_RDWR)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+ConnectionResetError: [WinError 10054] An existing connection was forcibly closed by the remote host
+INFO:     100.126.19.77:49669 - "GET /output/ex_sex/1 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:49669 - "GET /-/static/app.css?d59929 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:57971 - "GET /-/static/app.css HTTP/1.1" 200 OK
+INFO:     100.126.19.77:51570 - "GET /custom/styles.css?v=4 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:59732 - "GET /custom/desktop.css?v=4 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:57230 - "GET /custom/formatting.js?v=4 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:60607 - "GET /custom/fix_links.js?v=5 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:49669 - "GET /custom/timestamp_calendar_button.js?v=1 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:51570 - "GET /custom/click_to_filter.js?v=4 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:57230 - "GET /custom/timestamp_autosize_config.js HTTP/1.1" 200 OK
+INFO:     100.126.19.77:59732 - "GET /custom/map_overlay.js?v=2 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:57971 - "GET /custom/mobile.css?v=4 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:57971 - "GET /custom/timestamp_columns.txt HTTP/1.1" 200 OK
+INFO:     100.126.19.77:59732 - "GET /custom/map_overlay.css HTTP/1.1" 200 OK
+INFO:     100.126.19.77:59732 - "GET /custom/timestamp_columns.txt HTTP/1.1" 200 OK
+Exception in callback _ProactorBasePipeTransport._call_connection_lost()
+handle: <Handle _ProactorBasePipeTransport._call_connection_lost()>
+Traceback (most recent call last):
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\events.py", line 89, in _run
+    self._context.run(self._callback, *self._args)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\proactor_events.py", line 165, in _call_connection_lost
+    self._sock.shutdown(socket.SHUT_RDWR)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+ConnectionResetError: [WinError 10054] An existing connection was forcibly closed by the remote host
+Exception in callback _ProactorBasePipeTransport._call_connection_lost()
+handle: <Handle _ProactorBasePipeTransport._call_connection_lost()>
+Traceback (most recent call last):
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\events.py", line 89, in _run
+    self._context.run(self._callback, *self._args)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\proactor_events.py", line 165, in _call_connection_lost
+    self._sock.shutdown(socket.SHUT_RDWR)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+ConnectionResetError: [WinError 10054] An existing connection was forcibly closed by the remote host
+Exception in callback _ProactorBasePipeTransport._call_connection_lost()
+handle: <Handle _ProactorBasePipeTransport._call_connection_lost()>
+Traceback (most recent call last):
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\events.py", line 89, in _run
+    self._context.run(self._callback, *self._args)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\proactor_events.py", line 165, in _call_connection_lost
+    self._sock.shutdown(socket.SHUT_RDWR)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+ConnectionResetError: [WinError 10054] An existing connection was forcibly closed by the remote host
+Exception in callback _ProactorBasePipeTransport._call_connection_lost()
+handle: <Handle _ProactorBasePipeTransport._call_connection_lost()>
+Traceback (most recent call last):
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\events.py", line 89, in _run
+    self._context.run(self._callback, *self._args)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\proactor_events.py", line 165, in _call_connection_lost
+    self._sock.shutdown(socket.SHUT_RDWR)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+ConnectionResetError: [WinError 10054] An existing connection was forcibly closed by the remote host
+Exception in callback _ProactorBasePipeTransport._call_connection_lost()
+handle: <Handle _ProactorBasePipeTransport._call_connection_lost()>
+Traceback (most recent call last):
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\events.py", line 89, in _run
+    self._context.run(self._callback, *self._args)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\proactor_events.py", line 165, in _call_connection_lost
+    self._sock.shutdown(socket.SHUT_RDWR)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+ConnectionResetError: [WinError 10054] An existing connection was forcibly closed by the remote host
+Exception in callback _ProactorBasePipeTransport._call_connection_lost()
+handle: <Handle _ProactorBasePipeTransport._call_connection_lost()>
+Traceback (most recent call last):
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\events.py", line 89, in _run
+    self._context.run(self._callback, *self._args)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\asyncio\proactor_events.py", line 165, in _call_connection_lost
+    self._sock.shutdown(socket.SHUT_RDWR)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+ConnectionResetError: [WinError 10054] An existing connection was forcibly closed by the remote host
+INFO:     100.126.19.77:53328 - "GET /output/luogo/1 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:53328 - "GET /-/static/app.css?d59929 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:59580 - "GET /-/static/app.css HTTP/1.1" 200 OK
+INFO:     100.126.19.77:55489 - "GET /custom/desktop.css?v=4 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:56403 - "GET /custom/styles.css?v=4 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:54911 - "GET /custom/formatting.js?v=4 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:51494 - "GET /custom/fix_links.js?v=5 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:56403 - "GET /custom/click_to_filter.js?v=4 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:53328 - "GET /custom/timestamp_calendar_button.js?v=1 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:55489 - "GET /custom/timestamp_autosize_config.js HTTP/1.1" 200 OK
+INFO:     100.126.19.77:59580 - "GET /custom/map_overlay.js?v=2 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:54911 - "GET /custom/mobile.css?v=4 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:54911 - "GET /custom/timestamp_columns.txt HTTP/1.1" 200 OK
+INFO:     100.126.19.77:54911 - "GET /custom/timestamp_columns.txt HTTP/1.1" 200 OK
+^C

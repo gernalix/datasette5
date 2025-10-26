@@ -1,0 +1,42 @@
+{% extends "table.html" %}
+{% block content %}
+  <h1>calendar_range</h1>
+  <form id="datefilter" style="margin:0 0 1rem 0; display:flex; gap:.5rem; align-items:end;">
+    <div>
+      <label for="from" style="display:block;font-weight:600;">Da</label>
+      <input id="from" name="giorno__gte" type="date" value="{{ request.args.get('giorno__gte','') }}">
+    </div>
+    <div>
+      <label for="to" style="display:block;font-weight:600;">A</label>
+      <input id="to" name="giorno__lte" type="date" value="{{ request.args.get('giorno__lte','') }}">
+    </div>
+    <div>
+      <button type="submit">Filtra</button>
+      <a class="btn" href="{{ urls.table(database, table) }}" style="margin-left:.5rem;">Reset</a>
+    </div>
+  </form>
+  {{ super() }}
+{% endblock %}
+{% block extra_body %}
+  {{ super() }}
+  <script defer>
+  (function(){
+    const q = new URLSearchParams(window.location.search);
+    const from = document.getElementById('from');
+    const to   = document.getElementById('to');
+    function pad(n){return (n<10?'0':'')+n;}
+    function iso(d){return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());}
+    if(!q.has('giorno__gte') && !q.has('giorno__lte')){
+      const now=new Date(), past=new Date(); past.setDate(now.getDate()-30);
+      from.value=iso(past); to.value=iso(now);
+    }
+    document.getElementById('datefilter').addEventListener('submit', function(ev){
+      ev.preventDefault();
+      const p=new URLSearchParams(window.location.search);
+      if(from.value) p.set('giorno__gte', from.value); else p.delete('giorno__gte');
+      if(to.value)   p.set('giorno__lte', to.value);   else p.delete('giorno__lte');
+      window.location.search=p.toString();
+    });
+  })();
+  </script>
+{% endblock %}

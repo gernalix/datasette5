@@ -1,0 +1,14 @@
+
+/* Strong overrides to keep timestamp columns on a single line and readable */
+table.table th.ts-no-wrap,
+table.table td.ts-no-wrap {
+  white-space: nowrap !important;
+  word-break: normal !important;
+  overflow-wrap: normal !important;
+  hyphens: manual !important;
+}
+
+/* Allow horizontal scrolling instead of wrapping */
+.table-wrapper, .content, table.table {
+  overflow-x: auto;
+}

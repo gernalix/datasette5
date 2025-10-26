@@ -1,0 +1,8 @@
+
+/* Ensure nowrap works on both table markups */
+table.rows-and-columns th.ts-no-wrap, table.rows-and-columns td.ts-no-wrap,
+table.table th.ts-no-wrap,           table.table td.ts-no-wrap {
+  white-space: nowrap !important;
+  word-break: normal !important;
+  overflow-wrap: normal !important;
+}

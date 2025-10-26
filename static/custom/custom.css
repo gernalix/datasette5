@@ -1,0 +1,35 @@
+/* ---- Forza layout desktop anche su mobile ---- */
+@media (max-width: 900px) {
+  /* Disattiva completamente la modalità 'schede verticali' */
+  .row-card, .mobile-row, [class*="card-row"] {
+    display: none !important;
+  }
+
+  /* Mostra sempre la vera tabella HTML */
+  table {
+    display: table !important;
+    width: 100% !important;
+    border-collapse: collapse;
+    font-size: 15px; /* mantieni leggibile */
+  }
+
+  /* Wrapper scrollabile orizzontalmente */
+  .table-wrapper, .table-container, .datasette-table {
+    display: block !important;
+    overflow-x: auto !important;
+    white-space: nowrap !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Colonne leggibili, evita compressione del testo */
+  th, td {
+    padding: 6px 10px !important;
+    min-width: 90px;
+  }
+}
+
+/* ---- Estetica generale ---- */
+td, th {
+  vertical-align: middle !important;
+  text-align: center;
+}
