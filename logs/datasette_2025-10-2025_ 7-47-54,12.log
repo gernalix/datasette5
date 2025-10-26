@@ -1,0 +1,48 @@
+==== Datasette HTTPS launcher at 26/10/2025  7:47:54,13 ==== 
+Working dir: Z:\download\datasette5 
+[OK] Found asset: "static\custom\format_overrides.js" 
+[OK] Found asset: "static\custom\format_overrides.css" 
+[OK] Found asset: "templates\base.html" 
+[INFO] Plugins dir not found; continuing without it. 
+[INFO] metadata.json not found; continuing without it. 
+[OK] Using templates dir: "templates" 
+[OK] Serving static custom: "static\custom" 
+[OK] HTTPS enabled. 
+Running: datasette "output.db" --host 0.0.0.0 --port 8001 --ssl-certfile "C:\Users\seste\daniele.tail6b4058.ts.net.crt" --ssl-keyfile "C:\Users\seste\daniele.tail6b4058.ts.net.key" --template-dir "templates" --static custom:"static\custom"   
+C:\Users\seste\AppData\Local\Programs\Python\Python313\Lib\site-packages\datasette\app.py:14: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
+  import pkg_resources
+INFO:     Started server process [21736]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on https://0.0.0.0:8001 (Press CTRL+C to quit)
+INFO:     100.126.19.77:49272 - "GET /output/calendar_range HTTP/1.1" 200 OK
+INFO:     100.126.19.77:49272 - "GET /-/static/app.css?d59929 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:56999 - "GET /-/static/app.css HTTP/1.1" 200 OK
+INFO:     100.126.19.77:51407 - "GET /custom/styles.css?v=4 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:59739 - "GET /custom/mobile.css?v=4 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:57916 - "GET /custom/desktop.css?v=4 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:57916 - "GET /custom/formatting.js?v=4 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:59739 - "GET /custom/fix_links.js?v=5 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:51407 - "GET /custom/timestamp_calendar_button.js?v=1 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:56999 - "GET /custom/click_to_filter.js?v=4 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:49272 - "GET /custom/timestamp_autosize_config.js HTTP/1.1" 200 OK
+INFO:     100.126.19.77:53514 - "GET /custom/map_overlay.js?v=2 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:57916 - "GET /-/static/table.js HTTP/1.1" 200 OK
+INFO:     100.126.19.77:53514 - "GET /custom/timestamp_columns.txt HTTP/1.1" 200 OK
+INFO:     100.126.19.77:53514 - "GET /custom/timestamp_columns.txt HTTP/1.1" 200 OK
+INFO:     100.126.19.77:53514 - "GET /output/calendar_range HTTP/1.1" 200 OK
+INFO:     100.126.19.77:53514 - "GET /-/static/app.css?d59929 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:57916 - "GET /-/static/app.css HTTP/1.1" 200 OK
+INFO:     100.126.19.77:56999 - "GET /custom/styles.css?v=4 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:51407 - "GET /custom/desktop.css?v=4 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:49272 - "GET /custom/mobile.css?v=4 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:57916 - "GET /custom/formatting.js?v=4 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:53514 - "GET /custom/fix_links.js?v=5 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:49272 - "GET /custom/click_to_filter.js?v=4 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:56999 - "GET /custom/timestamp_autosize_config.js HTTP/1.1" 200 OK
+INFO:     100.126.19.77:51407 - "GET /custom/timestamp_calendar_button.js?v=1 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:59739 - "GET /custom/map_overlay.js?v=2 HTTP/1.1" 200 OK
+INFO:     100.126.19.77:53514 - "GET /-/static/table.js HTTP/1.1" 200 OK
+INFO:     100.126.19.77:53514 - "GET /custom/timestamp_columns.txt HTTP/1.1" 200 OK
+INFO:     100.126.19.77:53514 - "GET /custom/timestamp_columns.txt HTTP/1.1" 200 OK
+^C
