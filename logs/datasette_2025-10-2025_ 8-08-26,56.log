@@ -207,3 +207,4 @@ INFO:     100.126.19.77:50183 - "GET /custom/map_overlay.css HTTP/1.1" 200 OK
 INFO:     100.126.19.77:50183 - "GET /custom/timestamp_columns.txt HTTP/1.1" 200 OK
 INFO:     100.126.19.77:50183 - "GET /output/sex.json?_sort=id&interrotto_id=1&_shape=objects&_size=max HTTP/1.1" 200 OK
 INFO:     100.126.19.77:50183 - "GET /output/luogo.json?_shape=objects&_size=max&_where=id+in+%284%29 HTTP/1.1" 200 OK
+^C

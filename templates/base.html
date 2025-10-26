@@ -4,10 +4,13 @@
   {{ super() }}
   <!-- CSS base Datasette -->
   <link rel="stylesheet" href="/-/static/app.css">
+
   <!-- CSS personalizzati -->
   <link rel="stylesheet" href="/custom/styles.css?v=4">
   <link rel="stylesheet" href="/custom/mobile.css?v=4" media="(max-width: 900px)">
   <link rel="stylesheet" href="/custom/desktop.css?v=4">
+  <link rel="stylesheet" href="/custom/date_range_filter.css?v=4">
+
   <!-- JS personalizzati caricati da <head> con defer -->
   <script defer src="/custom/formatting.js?v=4"></script>
   <script defer src="/custom/fix_links.js?v=5"></script>
@@ -15,7 +18,8 @@
   <script defer src="/custom/timestamp_calendar_button.js?v=1"></script>
   <script defer src="/custom/timestamp_autosize_config.js"></script>
   <script defer src="/custom/map_overlay.js?v=2"></script>
-
-
   <script defer src="/custom/calendar_range_map.js?v=final1"></script>
+
+  <!-- 🔹 Filtro date "Da... a" -->
+  <script defer src="/custom/date_range_filter.js?v=4"></script>
 {% endblock %}
