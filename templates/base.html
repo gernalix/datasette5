@@ -2,24 +2,40 @@
 
 {% block extra_head %}
   {{ super() }}
-  <!-- CSS base Datasette -->
+  <!-- CSS base -->
   <link rel="stylesheet" href="/-/static/app.css">
 
   <!-- CSS personalizzati -->
-  <link rel="stylesheet" href="/custom/styles.css?v=4">
-  <link rel="stylesheet" href="/custom/mobile.css?v=4" media="(max-width: 900px)">
-  <link rel="stylesheet" href="/custom/desktop.css?v=4">
-  <link rel="stylesheet" href="/custom/date_range_filter.css?v=4">
+  <link rel="stylesheet" href="/custom/styles.css?v=6">
+  <link rel="stylesheet" href="/custom/desktop.css?v=6">
+  <link rel="stylesheet" href="/custom/mobile.css?v=6" media="(max-width: 900px)">
+  <link rel="stylesheet" href="/custom/date_range_filter.css?v=6">
+  <link rel="stylesheet" href="/custom/map_overlay.css?v=6">
+  <link rel="stylesheet" href="/custom/luogo_mappa.css?v=6">
+{% endblock %}
 
-  <!-- JS personalizzati caricati da <head> con defer -->
-  <script defer src="/custom/formatting.js?v=4"></script>
-  <script defer src="/custom/fix_links.js?v=5"></script>
-  <script defer src="/custom/click_to_filter.js?v=4"></script>
-  <script defer src="/custom/timestamp_calendar_button.js?v=1"></script>
-  <script defer src="/custom/timestamp_autosize_config.js"></script>
-  <script defer src="/custom/map_overlay.js?v=2"></script>
-  <script defer src="/custom/calendar_range_map.js?v=final1"></script>
+{% block extra_body %}
+  <!-- 🔹 Gestione date e filtro "Da... A" -->
+  <script defer src="/custom/date-power.js?v=6"></script>
+  <script defer src="/custom/date_range_filter.js?v=6"></script>
+  <script defer src="/custom/date_range_calendar_shim.js?v=6"></script>
 
-  <!-- 🔹 Filtro date "Da... a" -->
-  <script defer src="/custom/date_range_filter.js?v=4"></script>
+  <!-- 🔹 Funzioni di formattazione e link -->
+  <script defer src="/custom/formatting.js?v=6"></script>
+  <script defer src="/custom/fix_links.js?v=6"></script>
+  <script defer src="/custom/click_to_filter.js?v=6"></script>
+  <script defer src="/custom/ex_super_emoji_links.js?v=6"></script>
+
+  <!-- 🔹 Timestamp e calendari -->
+  <script defer src="/custom/timestamp_calendar_button.js?v=6"></script>
+  <script defer src="/custom/timestamp_autosize_config.js?v=6"></script>
+
+  <!-- 🔹 Mappe e viste -->
+  <script defer src="/custom/map_overlay.js?v=6"></script>
+  <script defer src="/custom/calendar_range_map.js?v=6"></script>
+  <script defer src="/custom/luogo_mappa.js?v=6"></script>
+
+  <!-- 🔹 Override e aggiustamenti visuali -->
+  <script defer src="/custom/format_overrides.js?v=6"></script>
+  <script defer src="/custom/bool-visuals.js?v=6"></script>
 {% endblock %}
