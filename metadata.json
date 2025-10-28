@@ -1,42 +1,26 @@
 {
   "title": "Output",
-  "description": "Datasette instance with custom formatting",
-  "license": "",
-  "homepage": "/output/sex",
+  "description": "Datasette instance with custom formatting and scripts",
   "settings": {
+    "base_url": "/",
     "extra_css_urls": [
-      "/static/custom/desktop.css?v=4"
+      "/custom/desktop.css?v=6"
     ],
     "extra_js_urls": [
-      "/static/custom/click_to_filter.js?v=4",
-      "/static/custom/map_overlay.js?v=4",
-      "/static/custom/date_range_filter.js?v=4"
-    ],
-    "default_page_size": 50,
-    "allow_download": true,
-    "sql_time_limit_ms": 2000
+      "/custom/click_to_filter.js?v=6",
+      "/custom/map_overlay.js?v=6",
+      "/custom/date_range_filter.js?v=6",
+      "/custom/hide_sql_views.js?v=6"
+    ]
   },
   "databases": {
     "output": {
       "tables": {
-        "*": {
-          "sortable_columns": true,
-          "facets": [
-            "inizio",
-            "fine",
-            "partner_id",
-            "droghe"
-          ],
-          "label_column": null
-        },
         "sex": {
           "label_columns": {
             "partner_id": "partner.nome",
             "luogo_id": "luogo.indirizzo"
           }
-        },
-        "calendar_range": {
-          "hidden": true
         }
       }
     }
