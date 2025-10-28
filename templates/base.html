@@ -30,39 +30,36 @@
   <script>
     (function(){
       try {
-        if (!/\/output\/calendar_range(\/|$)/.test(location.pathname)) return;
-        const nuke = () => {
-          const rx = /CREATE\s+VIEW|CREATE\s+VIEW\s+calendar_range/i;
-          // remove pre/code blocks showing SQL
-          document.querySelectorAll('pre, code').forEach(el => {
-            const t = (el.textContent||'');
-            if (rx.test(t)) {
-              // remove nearby header if it says SQL
-              const prev = el.previousElementSibling;
-              if (prev && /^H\d$/i.test(prev.tagName) && /(sql|view sql|query)/i.test(prev.textContent||'')) {
-                prev.remove();
-              }
-              // remove a reasonable wrapper (section/div) else remove the element
-              let node = el;
-              while (node && node.parentElement) {
-                const tag = node.tagName ? node.tagName.toLowerCase() : '';
-                if (tag === 'section' || tag === 'div') { node.remove(); return; }
-                node = node.parentElement;
-              }
-              el.remove();
+        const TARGET = "https://datasette5.onrender.com/output";
+        const normalize = s => (s||"").trim().toLowerCase();
+
+        const rewriteHome = () => {
+          // a) qualunque <a> con testo "home"
+          document.querySelectorAll('a').forEach(a => {
+            const label = normalize(a.textContent);
+            if (label === 'home') {
+              a.setAttribute('href', TARGET);
+              a.removeAttribute('target');
             }
           });
-          // also remove stray "Advanced export" blocks (safety)
-          document.querySelectorAll('h2, h3').forEach(h => {
-            const t = (h.textContent||'').trim().toLowerCase();
-            if (t === 'advanced export') {
-              const p = h.parentElement; const next = h.nextElementSibling;
-              if (next) next.remove(); if (p && p.children.length === 0) p.remove(); h.remove();
+
+          // b) link breadcrumb classico a "/"
+          document.querySelectorAll('a[href="/"]').forEach(a => {
+            a.setAttribute('href', TARGET);
+            a.removeAttribute('target');
+          });
+
+          // c) eventuali link "site title" nell'header
+          document.querySelectorAll('header a, nav a').forEach(a => {
+            if (normalize(a.textContent) === 'home') {
+              a.setAttribute('href', TARGET);
+              a.removeAttribute('target');
             }
           });
         };
-        nuke();
-        new MutationObserver(nuke).observe(document.body, { childList: true, subtree: true });
-      } catch(e){ /* silent */ }
+
+        rewriteHome();
+        new MutationObserver(rewriteHome).observe(document.body, { childList: true, subtree: true });
+      } catch(e) { }
     })();
   </script>
