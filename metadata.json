@@ -1,0 +1,27 @@
+{
+  "title": "Output",
+  "description": "Datasette instance with custom formatting",
+  "license": "",
+  "databases": {
+    "output": {
+      "tables": {
+        "*": {
+          "sortable_columns": true,
+          "facets": [
+            "inizio",
+            "fine",
+            "partner_id",
+            "droghe"
+          ],
+          "label_column": null
+        },
+        "sex": {
+          "label_columns": {
+            "partner_id": "partner.nome",
+            "luogo_id": "luogo.indirizzo"
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,1 +1,4 @@
-:root { --ds-accent: #0b74de; }
+/* Page chrome (title spacing, container width) */
+h1{ font-weight:700; letter-spacing:.5px }
+.page-header{ margin-bottom: .75rem }
+.container{ max-width: 1400px }

@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="content">
+  <h1>Database principale</h1>
+
+  <h2>Sezione sesso</h2>
+  <ul>
+    <li><a href="/{{ database }}/sex">sex</a></li>
+    <li><a href="/{{ database }}/partner">partner</a></li>
+  </ul>
+
+  <h2>Sezione calendario</h2>
+  <ul>
+    <li><a href="/{{ database }}/calendar_range">calendar_range</a></li>
+  </ul>
+</section>
+{% endblock %}

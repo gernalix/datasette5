@@ -329,3 +329,25 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 });
+
+// --- Patch: render ➡️ for sex.link only ---
+(function(){
+  function isSexLink(cell){
+    const td = cell.closest("td,th");
+    if(!td) return false;
+    const col = td.getAttribute("data-col") || (td.closest("table")?.querySelectorAll("thead th")||[])[td.cellIndex]?.textContent?.trim()?.toLowerCase();
+    const tbl = (document.querySelector('main h1')?.textContent||'').trim().toLowerCase();
+    return col === "link" && /\bsex\b/.test(tbl);
+  }
+  function apply(){
+    document.querySelectorAll("table.ds-table tbody td a").forEach(a=>{
+      if(isSexLink(a)){
+        a.textContent = "➡️";
+        a.title = "Apri collegamento";
+      }
+    });
+  }
+  document.addEventListener("DOMContentLoaded", apply);
+  document.addEventListener("datasette:render-complete", apply, {once:false});
+})();
+// --- End Patch ---
