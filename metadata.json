@@ -2,6 +2,20 @@
   "title": "Output",
   "description": "Datasette instance with custom formatting",
   "license": "",
+  "homepage": "/output/sex",
+  "settings": {
+    "extra_css_urls": [
+      "/static/custom/desktop.css?v=4"
+    ],
+    "extra_js_urls": [
+      "/static/custom/click_to_filter.js?v=4",
+      "/static/custom/map_overlay.js?v=4",
+      "/static/custom/date_range_filter.js?v=4"
+    ],
+    "default_page_size": 50,
+    "allow_download": true,
+    "sql_time_limit_ms": 2000
+  },
   "databases": {
     "output": {
       "tables": {

@@ -1,2 +1,2 @@
-datasette>=1.0
-uvicorn
+datasette==0.65.1
+uvicorn==0.29.0
