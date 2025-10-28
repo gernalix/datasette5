@@ -1,0 +1,49 @@
+{% extends "default:query.html" %}
+
+{% block extra_body %}
+  {{ super() }}
+  <script>
+    (function(){
+      // Applica solo alla pagina /output/calendar_range
+      if (!/\/output\/calendar_range(\/|$)/.test(location.pathname)) return;
+
+      const hideSQL = () => {
+        // Rimuovi blocchi SQL che mostrano la definizione della view
+        const rx = /CREATE\s+VIEW(\s+calendar_range)?|AS\s+SELECT/i;
+        document.querySelectorAll('pre, code').forEach(el => {
+          const t = (el.textContent || "");
+          if (rx.test(t)) {
+            // Elimina eventuale header immediatamente precedente con testo "SQL", "View SQL", "Query"
+            const prev = el.previousElementSibling;
+            if (prev && /^H\d$/i.test(prev.tagName) && /(sql|view sql|query)/i.test(prev.textContent || "")) {
+              prev.remove();
+            }
+            // Risali per trovare un wrapper sensato e rimuoverlo
+            let node = el;
+            while (node && node.parentElement) {
+              const tag = node.tagName ? node.tagName.toLowerCase() : "";
+              if (tag === "section" || tag === "div") { node.remove(); return; }
+              node = node.parentElement;
+            }
+            el.remove();
+          }
+        });
+
+        // Rimuovi "Advanced export" (se presente)
+        document.querySelectorAll('h2, h3').forEach(h => {
+          const txt = (h.textContent||"").trim().toLowerCase();
+          if (txt === "advanced export") {
+            const parent = h.parentElement;
+            const next = h.nextElementSibling;
+            if (next) next.remove();
+            h.remove();
+            if (parent && parent.children.length === 0) parent.remove();
+          }
+        });
+      };
+
+      hideSQL();
+      new MutationObserver(hideSQL).observe(document.body, { childList: true, subtree: true });
+    })();
+  </script>
+{% endblock %}

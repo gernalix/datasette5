@@ -1,2 +1,8 @@
 .ds-page { background: transparent; }
 #map { min-height: 60vh; height: 70vh; width: 100%; }
+
+/* Hide SQL block only on /output/calendar_range */
+body.table-calendar_range pre.wrapped-sql { display: none !important; }
+/* Hide heading immediately above the SQL block (SQL / View SQL / Query) */
+body.table-calendar_range h3:has(+ pre.wrapped-sql),
+body.table-calendar_range h2:has(+ pre.wrapped-sql) { display: none !important; }
