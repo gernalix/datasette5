@@ -45,7 +45,35 @@
       maxZoom: 19
     }).addTo(map);
 
-    const bounds = [];
+    
+    /* GEOLOCATE CTRL START */
+    (function(){ 
+      if (!window.__geo_css_added){ window.__geo_css_added=true; var st=document.createElement('style'); st.textContent='.geolocate-control .geolocate-btn{width:34px;height:34px;line-height:34px;text-align:center;display:block;text-decoration:none;background:#fff;font-size:18px}.geolocate-control .geolocate-btn.busy{animation:geo-pulse .9s infinite ease-in-out}@keyframes geo-pulse{0%{transform:scale(1)}50%{transform:scale(.92)}100%{transform:scale(1)}}.geo-toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:rgba(0,0,0,.78);color:#fff;padding:8px 12px;border-radius:6px;font:14px/1.1 system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;opacity:0;pointer-events:none;transition:opacity .2s ease}.geo-toast.show{opacity:1}'; document.head.appendChild(st); }
+      var Geo = L.Control.extend({
+        options: { position: 'topleft' },
+        onAdd: function(){ 
+          var c=L.DomUtil.create('div','leaflet-control leaflet-bar geolocate-control');
+          var a=L.DomUtil.create('a','geolocate-btn',c); a.href='#'; a.title='Centrati qui'; a.innerHTML='📍';
+          L.DomEvent.on(a,'click',L.DomEvent.stop).on(a,'click',function(){
+            if(!navigator.geolocation){toast('Geolocalizzazione non supportata');return;}
+            a.classList.add('busy');
+            navigator.geolocation.getCurrentPosition(function(p){ 
+              a.classList.remove('busy');
+              var lat=p.coords.latitude,lng=p.coords.longitude,acc=p.coords.accuracy||0;
+              if(!map.__geo_marker) map.__geo_marker=L.marker([lat,lng],{title:'Tu sei qui'}).addTo(map); else map.__geo_marker.setLatLng([lat,lng]);
+              if(!map.__geo_circle) map.__geo_circle=L.circle([lat,lng],{radius:acc}).addTo(map); else map.__geo_circle.setLatLng([lat,lng]).setRadius(acc);
+              try{ var z=map.getZoom(); if(typeof z==='number'&&z<16) map.flyTo([lat,lng],16,{duration:.6}); else map.panTo([lat,lng]); }catch(e){ map.setView([lat,lng],16); }
+            }, function(err){ a.classList.remove('busy'); toast('Posizione non ottenibile: '+(err&&err.message?err.message:'')); }, {enableHighAccuracy:true,timeout:12000,maximumAge:0});
+          });
+          return c;
+        }
+      });
+      map.addControl(new Geo());
+      function toast(txt){ var t=document.getElementById('geo-toast'); if(!t){t=document.createElement('div');t.id='geo-toast';t.className='geo-toast';document.body.appendChild(t);}
+        t.textContent=txt; t.classList.add('show'); setTimeout(function(){t.classList.remove('show');},2600); }
+    })();
+    /* GEOLOCATE CTRL END */
+const bounds = [];
     let count = 0;
     rows.forEach(r => {
       const lat = toNum(r.lat), lon = toNum(r.lon);
