@@ -134,31 +134,121 @@
     
 
 
+
+
+
+
 /* GEOLOCATE CTRL START */
 (function(){ 
-  if (!window.__geo_css_added){ window.__geo_css_added=true; var st=document.createElement('style'); st.textContent='.geolocate-control .geolocate-btn{width:34px;height:34px;line-height:34px;text-align:center;display:block;text-decoration:none;background:#fff;font-size:18px}.geolocate-control .geolocate-btn.busy{animation:geo-pulse .9s infinite ease-in-out}@keyframes geo-pulse{0%{transform:scale(1)}50%{transform:scale(.92)}100%{transform:scale(1)}}.geo-toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:rgba(0,0,0,.78);color:#fff;padding:8px 12px;border-radius:6px;font:14px/1.1 system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;opacity:0;pointer-events:none;transition:opacity .2s ease}.geo-toast.show{opacity:1}'; document.head.appendChild(st); }
-  var Geo=L.Control.extend({
-    options:{position:'topright'},
-    onAdd:function(){
-      var c=L.DomUtil.create('div','leaflet-control leaflet-bar geolocate-control');
-      var a=L.DomUtil.create('a','geolocate-btn',c); a.href='#'; a.title='Centrati qui'; a.innerHTML='📍';
+  if (!window.__geo_css_added){
+    window.__geo_css_added = true;
+    var st=document.createElement('style'); st.textContent='.geolocate-control .geolocate-btn{width:34px;height:34px;line-height:34px;text-align:center;display:block;text-decoration:none;background:#fff;font-size:18px}.geolocate-control .geolocate-btn.busy{animation:geo-pulse .9s infinite ease-in-out}@keyframes geo-pulse{0%{transform:scale(1)}50%{transform:scale(.92)}100%{transform:scale(1)}}.geo-toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:rgba(0,0,0,.78);color:#fff;padding:8px 12px;border-radius:6px;font:14px/1.1 system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;opacity:0;pointer-events:none;transition:opacity .2s ease}.geo-toast.show{opacity:1}'; document.head.appendChild(st);
+  }
+
+  // 1) SCANSIONE INIZIALE (dopo creazione mappa) PER CATTURARE TUTTI I MARKER GIÀ PRESENTI
+  setTimeout(function(){ try { 
+    var b = L.latLngBounds();
+    map.eachLayer(function(layer){
+      try{
+        if (layer && typeof layer.getLatLng === 'function'){ 
+          var ll = layer.getLatLng(); if (ll) b.extend(ll);
+        } else if (layer && typeof layer.getBounds === 'function'){ 
+          var gb = layer.getBounds(); if (gb && gb.isValid()) b.extend(gb);
+        }
+      }catch(e){}
+    });
+    if (b.isValid()) map.__dataBounds = b;
+  } catch(e){ console.warn('init bounds error', e); } }, 800);
+
+  // 2) HOOK SUCCESSIVI: intercetta marker aggiunti DOPO
+  if (L && L.Marker && !L.Marker.prototype.__geo_addToPatched){
+    L.Marker.prototype.__geo_addToPatched = true;
+    var _addTo = L.Marker.prototype.addTo;
+    L.Marker.prototype.addTo = function(m){
+      var r = _addTo.call(this, m);
+      try{ 
+        if (!this.options || !this.options.__geoUser){
+          if (!m.__dataBounds) m.__dataBounds = L.latLngBounds();
+          var ll = this.getLatLng && this.getLatLng();
+          if (ll && typeof ll.lat==='number' && typeof ll.lng==='number') m.__dataBounds.extend(ll);
+        }
+      }catch(e){}
+      return r;
+    };
+  }
+  if (L && L.FeatureGroup && !L.FeatureGroup.prototype.__geo_addLayerPatched){
+    L.FeatureGroup.prototype.__geo_addLayerPatched = true;
+    var _addLayer = L.FeatureGroup.prototype.addLayer;
+    L.FeatureGroup.prototype.addLayer = function(layer){
+      var r = _addLayer.call(this, layer);
+      try{
+        var m = this._map || (this.getLayers && this.getLayers()[0] && this.getLayers()[0]._map);
+        if (m){
+          if (!m.__dataBounds) m.__dataBounds = L.latLngBounds();
+          if (layer && typeof layer.getBounds === 'function'){ var bb = layer.getBounds(); if (bb && bb.isValid()) m.__dataBounds.extend(bb); }
+          else if (layer && typeof layer.getLatLng === 'function'){ var ll = layer.getLatLng(); if (ll) m.__dataBounds.extend(ll); }
+        }
+      }catch(e){}
+      return r;
+    };
+  }
+
+  // 3) CONTROLLO 📍 (topright) che fa fitBounds(data + user)
+  var Geo = L.Control.extend({
+    options: { position: 'topright' },
+    onAdd: function(){
+      var c = L.DomUtil.create('div','leaflet-control leaflet-bar geolocate-control');
+      var a = L.DomUtil.create('a','geolocate-btn',c); 
+      a.href='#'; a.title='Centrati + dati'; a.innerHTML='📍';
       L.DomEvent.on(a,'click',L.DomEvent.stop).on(a,'click',function(){
-        if(!navigator.geolocation){toast('Geolocalizzazione non supportata'); return;}
+        if (!navigator.geolocation){ toast('Geolocalizzazione non supportata'); return; }
         a.classList.add('busy');
         navigator.geolocation.getCurrentPosition(function(p){
+  a.classList.remove('busy');
+  var lat=p.coords.latitude, lng=p.coords.longitude, acc=p.coords.accuracy||0;
+
+  // user marker + circle (flag for exclusion in scans)
+  if (!map.__geo_marker) map.__geo_marker = L.marker([lat,lng], {title:'Tu sei qui', __geoUser:true}).addTo(map);
+  else map.__geo_marker.setLatLng([lat,lng]);
+  if (!map.__geo_circle) map.__geo_circle = L.circle([lat,lng], {radius: acc}).addTo(map);
+  else map.__geo_circle.setLatLng([lat,lng]).setRadius(acc);
+
+  // Recompute bounds LIVE: all current layers (excluding user marker), plus user location
+  var b = L.latLngBounds();
+  map.eachLayer(function(layer){
+    try{
+      if (layer && typeof layer.getLatLng === 'function'){
+        if (layer.options && layer.options.__geoUser) return; // skip user marker
+        var ll = layer.getLatLng();
+        if (ll) b.extend(ll);
+      } else if (layer && typeof layer.getBounds === 'function'){
+        var gb = layer.getBounds();
+        if (gb && gb.isValid()) b.extend(gb);
+      }
+    }catch(e){}
+  });
+  b.extend([lat, lng]);
+
+  if (b.isValid()) map.fitBounds(b, { padding:[24,24], maxZoom: 16 });
+  else {
+    try { var z=map.getZoom(); if (typeof z==='number' && z<16) map.flyTo([lat,lng],16,{duration:.6}); else map.panTo([lat,lng]); }
+    catch(e){ map.setView([lat,lng],16); }
+  }
+}, function(err){
           a.classList.remove('busy');
-          var lat=p.coords.latitude,lng=p.coords.longitude,acc=p.coords.accuracy||0;
-          if(!map.__geo_marker) map.__geo_marker=L.marker([lat,lng],{title:'Tu sei qui'}).addTo(map); else map.__geo_marker.setLatLng([lat,lng]);
-          if(!map.__geo_circle) map.__geo_circle=L.circle([lat,lng],{radius:acc}).addTo(map); else map.__geo_circle.setLatLng([lat,lng]).setRadius(acc);
-          try{var z=map.getZoom(); if(typeof z==='number'&&z<16) map.flyTo([lat,lng],16,{duration:.6}); else map.panTo([lat,lng]);}catch(e){map.setView([lat,lng],16);}
-        }, function(err){ a.classList.remove('busy'); toast('Posizione non ottenibile: '+(err&&err.message?err.message:'')); }, { enableHighAccuracy:true, timeout:12000, maximumAge:0 });
+          toast('Posizione non ottenibile: ' + (err && err.message ? err.message : ''));
+        }, { enableHighAccuracy:true, timeout:12000, maximumAge:0 });
       });
       return c;
     }
   });
   map.addControl(new Geo());
-  function toast(txt){ var t=document.getElementById('geo-toast'); if(!t){t=document.createElement('div');t.id='geo-toast';t.className='geo-toast'; document.body.appendChild(t);}
-    t.textContent=txt; t.classList.add('show'); setTimeout(function(){t.classList.remove('show');},2600); }
+
+  function toast(txt){
+    var t=document.getElementById('geo-toast');
+    if (!t){ t=document.createElement('div'); t.id='geo-toast'; t.className='geo-toast'; document.body.appendChild(t); }
+    t.textContent=txt; t.classList.add('show'); setTimeout(function(){ t.classList.remove('show'); }, 2600);
+  }
 })();
 /* GEOLOCATE CTRL END */
 const bounds = [];
