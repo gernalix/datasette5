@@ -72,3 +72,26 @@
   <script src="/custom/link_columns.js?v=3"></script>
 {% endblock %}
 
+
+<script>
+/* Robust anti-flicker fallback: ensures the loader disappears regardless of other errors */
+(function(){
+  var done = false;
+  function ready(){
+    if (done) return;
+    done = true;
+    try { document.body.classList.add('ready'); } catch(e){ /* ignore */ }
+  }
+  // 1) As soon as DOM is interactive/complete
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', ready, {once:true});
+  } else {
+    // DOM already parsed
+    setTimeout(ready, 0);
+  }
+  // 2) On full load (images/css/js)
+  window.addEventListener('load', ready, {once:true});
+  // 3) Absolute timeout fallback in case events don't fire
+  setTimeout(ready, 3000);
+})();
+</script>

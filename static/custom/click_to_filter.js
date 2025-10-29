@@ -227,7 +227,15 @@ const MAIN_TABLES = new Set(["cruising", "io_sborro", "luogo", "partner", "sega"
           if (rid)   td.dataset.fkRowId = rid;
         }
 
-        const isBooleanCol = boolCols.has(i);
+        
+        // Gestione celle vuote (NULL): segnala come NULL generico e mostra un em-dash se la cella è davvero vuota
+        if (raw === "" || raw === null || /^\s*$/.test(String(raw))) {
+          td.dataset.isNullGeneric = "1";
+          if (!td.textContent || !td.textContent.trim()) {
+            td.textContent = "—"; // visual placeholder
+          }
+        }
+const isBooleanCol = boolCols.has(i);
         const isDateCol    = dateCols.has(i);
 
         let display = raw;
@@ -320,14 +328,14 @@ const MAIN_TABLES = new Set(["cruising", "io_sborro", "luogo", "partner", "sega"
       // LOOKUP: filtra con ID reale
       if (a && fkTable && !MAIN_TABLES.has(fkTable)) {
         e.preventDefault(); e.stopPropagation();
-        const isNull = td.dataset.isNullBool === "1";
+        const isNull = td.dataset.isNullBool === "1" || td.dataset.isNullGeneric === "1";
         const val = fkId || td.dataset.filterValue || extractCellValue(td);
         if (!val && !isNull) return;
         applyFilter(colName, val, isNull);
         return;
       }
       // Nessun link: filtra con valore grezzo o __isnull
-      const isNull = td.dataset.isNullBool === "1";
+      const isNull = td.dataset.isNullBool === "1" || td.dataset.isNullGeneric === "1";
       const val = td.dataset.filterValue || extractCellValue(td);
       if (!val && !isNull) return;
       applyFilter(colName, val, isNull);
