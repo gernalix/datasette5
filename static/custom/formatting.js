@@ -1,3 +1,12 @@
+/* AUTO_GUARD_BOOLEAN_AUTHORITY: do not run when booleans.js is authority */
+(function(){ 
+  try {
+    if (window && window.__BOOLEANS_JS_IS_AUTHORITY__) {
+      console.debug("Disabled boolean-related side-effects in formatting.js");
+      return;
+    }
+  } catch(_){}
+  // --- original content below ---
 (function(){
   // performance-optimized formatting: neutral only + booleans via not_booleans
   // no intervals; debounced observer scoped to table body
@@ -105,4 +114,5 @@
 
   if(document.readyState==="loading") document.addEventListener("DOMContentLoaded", run);
   else run();
+})();
 })();

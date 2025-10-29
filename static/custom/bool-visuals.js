@@ -1,3 +1,12 @@
+/* AUTO_GUARD_BOOLEAN_AUTHORITY: do not run when booleans.js is authority */
+(function(){ 
+  try {
+    if (window && window.__BOOLEANS_JS_IS_AUTHORITY__) {
+      console.debug("Disabled boolean-related side-effects in bool-visuals.js");
+      return;
+    }
+  } catch(_){}
+  // --- original content below ---
 
 (function(){
   function isBoolish(name){ return /\b(bool|flag|active|enabled|vero|true|false)\b/i.test(name||''); }
@@ -19,4 +28,6 @@
   function sweep(){ document.querySelectorAll('.table-wrapper table, table.rows-and-columns').forEach(process); }
   if(document.readyState==='loading'){ document.addEventListener('DOMContentLoaded',sweep,{once:true}); window.addEventListener('load',sweep,{once:true}); } else { sweep(); }
   try{ new MutationObserver(sweep).observe(document.documentElement,{childList:true,subtree:true}); setInterval(sweep,1200);}catch(e){}
+})();
+
 })();

@@ -1,3 +1,12 @@
+/* AUTO_GUARD_BOOLEAN_AUTHORITY: do not run when booleans.js is authority */
+(function(){ 
+  try {
+    if (window && window.__BOOLEANS_JS_IS_AUTHORITY__) {
+      console.debug("Disabled boolean-related side-effects in click_to_filter.js");
+      return;
+    }
+  } catch(_){}
+  // --- original content below ---
 // Click-to-filter (no heuristics) + date formatting + day-filter on timestamps + hide empty/all-false boolean columns
 // - LOOKUP: filtra usando l'ID reale estratto dall'URL (supporta ID non numerici)
 // - MAIN tables: nav sempre (clic ovunque nella cella)
@@ -384,4 +393,6 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   document.addEventListener("DOMContentLoaded", patchClicks);
   document.addEventListener("datasette:render-complete", patchClicks, {once:false});
+})();
+
 })();

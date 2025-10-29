@@ -1,103 +1,125 @@
-(function(){
-  // performance-optimized: no intervals; debounced observer; only target link columns
-  function debounce(fn, ms){
-    let t; return (...args)=>{ clearTimeout(t); t=setTimeout(()=>fn.apply(null,args), ms); };
+
+/* AUTO: link_columns.js v2 — force external links for configured columns, with MutationObserver */
+(() => {
+  function currentTable() {
+    try {
+      const seg = location.pathname.split("/").filter(Boolean);
+      const i = seg.indexOf("output");
+      if (i >= 0 && i + 1 < seg.length) return decodeURIComponent(seg[i+1]);
+      return seg[seg.length-1] || "";
+    } catch { return ""; }
   }
 
-  async function loadConfig(){
-    try{
-      const r = await fetch("/custom/link_columns.txt", {cache:"no-store"});
-      if(!r.ok) return {};
-      const txt = await r.text();
-      const map = {};
-      const lines = txt.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
-      for(const line of lines){
-        if(line.startsWith("#")) continue;
-        if(line.includes(":")){
-          const [t, rest] = line.split(":");
-          const cols = (rest||"").split(",").map(s=>s.trim()).filter(Boolean);
-          for(const c of cols){ (map[t.trim()] ||= new Set()).add(c); }
-        } else if(line.includes(".")){
-          const [t,c] = line.split(".");
-          if(t && c) (map[t.trim()] ||= new Set()).add(c.trim());
-        }
-      }
-      return map;
-    }catch(e){ console.warn("[link_columns] load fail", e); return {}; }
+  async function loadLinkSpec() {
+    try {
+      const res = await fetch("/custom/link_columns.txt", { cache: "no-store" });
+      if (!res.ok) return new Set();
+      const txt = await res.text();
+      const set = new Set();
+      txt.split(/\r?\n/).forEach(line => {
+        const s = line.trim();
+        if (!s || s.startsWith("#")) return;
+        if (s.includes(".")) set.add(s.toLowerCase());
+      });
+      return set;
+    } catch {
+      return new Set();
+    }
   }
 
-  function currentTable(){
-    const parts = location.pathname.split("/").filter(Boolean);
-    if(parts.length>=2 && parts[0]==="output") return decodeURIComponent(parts[1]);
-    return parts.length ? decodeURIComponent(parts[parts.length-1]) : null;
-  }
-  function findMainTable(){
-    return document.querySelector(".rows-and-columns table, #rows-and-columns table, main table, .content table");
-  }
-  function headerMap(tableEl){
-    const map=new Map();
-    tableEl.querySelectorAll("thead th, thead td").forEach((th,i)=>{
-      const name=(th.getAttribute("data-column")||th.textContent||"").trim();
-      if(name) map.set(name,i);
+  function getHeaders(tableEl) {
+    const heads = [];
+    tableEl.querySelectorAll("thead tr th").forEach(th => {
+      const name = th.getAttribute("data-column") || th.textContent;
+      heads.push((name || "").trim());
     });
-    return map;
+    return heads;
   }
-  function makeEmojiLink(href){
-    const a=document.createElement("a");
-    a.href=href;
-    a.textContent="➡️";
-    a.title=href;
-    a.setAttribute("data-unified","1");
-    a.setAttribute("data-emoji-link","1");
-    if(/^(https?:|mailto:|tel:|ftp:|magnet:)/i.test(href)){
-      a.target="_blank"; a.rel="noopener";
+
+  function inferColumnNameByIndex(headers, td) {
+    const tr = td.closest("tr");
+    if (!tr) return null;
+    const tds = Array.from(tr.children);
+    const idx = tds.indexOf(td);
+    if (idx < 0 || idx >= headers.length) return null;
+    return headers[idx] || null;
+  }
+
+  function isExternal(href) {
+    return /^https?:\/\//i.test(href || "");
+  }
+
+  function extractExternalUrl(td) {
+    // 1) Look for existing external anchors
+    const anchors = td.querySelectorAll("a[href]");
+    for (const a of anchors) {
+      const href = (a.getAttribute("href") || "").trim();
+      if (isExternal(href)) return href;
     }
-    return a;
+    // 2) Try from data-value / data-raw / text
+    const raw = td.getAttribute("data-value") || td.getAttribute("data-raw") || td.textContent || "";
+    // Prefer explicit URLs
+    const m = raw.match(/https?:\/\/[^\s"')<>]+/i);
+    if (m) return m[0];
+    const m2 = raw.match(/\bwww\.[^\s"')<>]+/i);
+    if (m2) return "https://" + m2[0];
+    return null;
   }
 
-  let CFG={};
-  async function apply(){
-    const tname = currentTable();
-    if(!tname || !CFG[tname]) return;
-    const tableEl = findMainTable();
-    if(!tableEl) return;
-    const tbody = tableEl.tBodies && tableEl.tBodies[0] ? tableEl.tBodies[0] : tableEl.querySelector("tbody");
-    if(!tbody) return;
-    const head = headerMap(tableEl);
-    const idx = [];
-    CFG[tname].forEach(c => { if(head.has(c)) idx.push(head.get(c)); });
-    if(!idx.length) return;
+  function renderArrow(td, url) {
+    if (!url) return;
+    td.innerHTML = "";
+    const a = document.createElement("a");
+    a.href = url;
+    a.target = "_blank";
+    a.rel = "noopener noreferrer";
+    a.textContent = "➡️";
+    a.title = url;
+    td.appendChild(a);
+    td.dataset.linkColumnsApplied = "1";
+  }
 
-    const rows = tbody.rows;
-    for(let r=0; r<rows.length; r++){
-      const tr = rows[r];
-      for(const i of idx){
-        const td = tr.children[i];
-        if(!td || td.dataset.unified==="1") continue;
-        const a = td.querySelector("a[href]");
-        td.innerHTML = "";
-        if(a){
-          const href = a.getAttribute("href");
-          td.appendChild(makeEmojiLink(href));
-        }
-        td.dataset.unified = "1";
+  function applyOnce(tableEl, spec) {
+    const headers = getHeaders(tableEl);
+    const tname = currentTable().toLowerCase();
+    tableEl.querySelectorAll("tbody tr td").forEach(td => {
+      const col = inferColumnNameByIndex(headers, td);
+      if (!col) return;
+      const key = `${tname}.${col}`.toLowerCase();
+      if (!spec.has(key)) return;
+
+      // If we've already applied, skip
+      if (td.dataset.linkColumnsApplied === "1") return;
+
+      const external = extractExternalUrl(td);
+      if (external) {
+        renderArrow(td, external);
+      } else {
+        // If there's an internal link currently, we still want to try to remove it only if we can find an external URL.
+        // If no external URL can be found, we leave it untouched (user asked to avoid internal fallback).
       }
-    }
+    });
   }
 
-  async function run(){
-    CFG = await loadConfig();
-    const applyDebounced = debounce(apply, 60);
-    applyDebounced();
-
-    const tableEl = findMainTable();
-    if(!tableEl) return;
-    const tbody = tableEl.tBodies && tableEl.tBodies[0] ? tableEl.tBodies[0] : tableEl.querySelector("tbody");
-    if(!tbody) return;
-    const mo = new MutationObserver(applyDebounced);
-    mo.observe(tbody, {childList:true, subtree:true});
+  function observeAndEnforce(tableEl, spec) {
+    const obs = new MutationObserver(() => {
+      applyOnce(tableEl, spec);
+    });
+    obs.observe(tableEl, { childList: true, subtree: true, characterData: true, attributes: true });
+    // Initial apply
+    applyOnce(tableEl, spec);
   }
 
-  if(document.readyState==="loading") document.addEventListener("DOMContentLoaded", run);
-  else run();
+  async function run() {
+    const table = document.querySelector("table.rows-and-columns, table");
+    if (!table) return;
+    const spec = await loadLinkSpec();
+    observeAndEnforce(table, spec);
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", run);
+  } else {
+    run();
+  }
 })();
