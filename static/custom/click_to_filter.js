@@ -5,7 +5,17 @@
 // - DATE: render dd-mm-yy hh:mm; click su cella data => filtra per GIORNO con substr("col",1,10)='YYYY-MM-DD'
 // - HIDE: colonne tutte vuote (sempre) + colonne booleane (lista) tutte false/NULL
 (function () {
-  const MAIN_TABLES = new Set(["cruising", "io_sborro", "luogo", "partner", "sega", "sesh", "sex"]);
+  
+  function getCellFilterValue(td, colName, rawText){
+    if (td && td.dataset && td.dataset.boolVal !== undefined) {
+      return td.dataset.boolVal; // "1" or "0"
+    }
+    const t = (rawText || td.textContent || "").trim();
+    if (t === "✅") return "1";
+    if (t === "❌") return "0";
+    return rawText;
+  }
+const MAIN_TABLES = new Set(["cruising", "io_sborro", "luogo", "partner", "sega", "sesh", "sex"]);
 
   // === CONFIG BOOLEAN (attive, non commentare) ===
   // Valgono OVUNQUE (tabelle + viste)

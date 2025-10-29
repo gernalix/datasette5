@@ -2,16 +2,7 @@
   "title": "Output",
   "description": "Datasette instance with custom formatting and scripts",
   "settings": {
-    "base_url": "/",
-    "extra_css_urls": [
-      "/custom/desktop.css?v=6"
-    ],
-    "extra_js_urls": [
-      "/custom/click_to_filter.js?v=6",
-      "/custom/map_overlay.js?v=6",
-      "/custom/date_range_filter.js?v=6",
-      "/custom/hide_sql_views.js?v=6"
-    ]
+    "base_url": "/"
   },
   "databases": {
     "output": {
