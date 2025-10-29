@@ -1,10 +1,7 @@
 /* AUTO_GUARD_BOOLEAN_AUTHORITY: do not run when booleans.js is authority */
 (function(){ 
   try {
-    if (window && window.__BOOLEANS_JS_IS_AUTHORITY__) {
-      console.debug("Disabled boolean-related side-effects in click_to_filter.js");
-      return;
-    }
+    if (window && window.__BOOLEANS_JS_IS_AUTHORITY__) { console.debug("click_to_filter.js: skipping only boolean parts"); window.__CLICK_TO_FILTER_SKIP_BOOLEAN__ = true; }
   } catch(_){}
   // --- original content below ---
 // Click-to-filter (no heuristics) + date formatting + day-filter on timestamps + hide empty/all-false boolean columns
@@ -73,6 +70,8 @@ const MAIN_TABLES = new Set(["cruising", "io_sborro", "luogo", "partner", "sega"
 
   // Booleani SOLO da liste
   function isBooleanColumn(name){
+    try { if (window && window.__CLICK_TO_FILTER_SKIP_BOOLEAN__) return false; } catch(_){}
+
     const n = (name || "").toLowerCase();
     if (BOOLEAN_FORCE_GLOBAL.has(n)) return true;
     const perTable = BOOLEAN_FORCE_BY_TABLE[CURRENT_TABLE];
@@ -80,6 +79,8 @@ const MAIN_TABLES = new Set(["cruising", "io_sborro", "luogo", "partner", "sega"
   }
 
   function normalizeBooleanToken(text){
+    try { if (window && window.__CLICK_TO_FILTER_SKIP_BOOLEAN__) return [text, null]; } catch(_){}
+
     const t = (text||"").trim().toLowerCase();
     if (TRUE_TOKENS.has(t))  return ["✅","1"];
     if (FALSE_TOKENS.has(t)) return ["❌","0"];
@@ -376,6 +377,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
 (function(){
   function isBooleanCell(td){
+    try { if (window && window.__CLICK_TO_FILTER_SKIP_BOOLEAN__) return false; } catch(_){}
+
     if (!td) return false;
     if (td.dataset && td.dataset.boolVal !== undefined) return true;
     const t = (td.textContent || "").trim();

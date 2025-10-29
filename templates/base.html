@@ -13,8 +13,10 @@
 
   <!-- JS personalizzati caricati da <head> con defer -->
   <script defer src="/custom/formatting.js?v=2"></script>
-
-  <script defer src="/custom/click_to_filter.js?v=4"></script>
+  <script defer src="/custom/formatting_v2.js?v=1"></script>
+  <script>window.__BOOLEANS_JS_IS_AUTHORITY__=false;</script>
+<script defer src="/custom/click_to_filter.js?v=4"></script>
+<script defer src="/custom/boolean.js?v=1"></script>
   <script defer src="/custom/timestamp_calendar_button.js?v=1"></script>
   <script defer src="/custom/timestamp_autosize_config.js"></script>
   <script defer src="/custom/map_overlay.js?v=2"></script>
@@ -23,7 +25,6 @@
   <script defer src="/custom/calendar_range_split.js?v=1"></script>
   <script defer src="/custom/date_range_filter.js?v=4"></script>
   <!-- ✅ Gestione unificata boolean (ground truth = not_booleans.txt) -->
-  <script defer src="/custom/booleans.js?v=1"></script>
 {% endblock %}
 
 {% block extra_body %}
@@ -68,6 +69,6 @@
   </script>
 
   <!-- 🔸 Emoji ➡️ per colonne link (configurate in link_columns.txt) -->
+  <script src="/custom/link_columns.js?v=3"></script>
 {% endblock %}
 
-<script src="/custom/link_columns.js?v=2"></script>
