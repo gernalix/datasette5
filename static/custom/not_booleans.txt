@@ -1,0 +1,1 @@
+sex: id, inizio, fine, partner_id, sesh_id, orgia_id, interrotto_id,voto, luogo_id, logseq_id, dove_sborra_id, come_viene_id,  cruising_id
