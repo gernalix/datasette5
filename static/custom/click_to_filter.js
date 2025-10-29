@@ -361,3 +361,27 @@ document.addEventListener("DOMContentLoaded", () => {
   document.addEventListener("datasette:render-complete", apply, {once:false});
 })();
 // --- End Patch ---
+
+
+// [Patch] Ignore boolean cells — logic moved to booleans.js
+
+(function(){
+  function isBooleanCell(td){
+    if (!td) return false;
+    if (td.dataset && td.dataset.boolVal !== undefined) return true;
+    const t = (td.textContent || "").trim();
+    return t === "✅" || t === "❌";
+  }
+  // Wrap default handlers to ignore boolean cells entirely
+  function patchClicks(){
+    document.querySelectorAll("table.ds-table tbody td").forEach(td=>{
+      if (isBooleanCell(td)){
+        // Remove any listeners accidentally attached by previous versions
+        const a = td.querySelector("a");
+        if (a) { a.removeAttribute("data-click-to-filter"); }
+      }
+    });
+  }
+  document.addEventListener("DOMContentLoaded", patchClicks);
+  document.addEventListener("datasette:render-complete", patchClicks, {once:false});
+})();
