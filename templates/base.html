@@ -15,6 +15,7 @@
   <script defer src="/custom/formatting.js?v=2"></script>
   <script defer src="/custom/formatting_v2.js?v=1"></script>
   <script>window.__BOOLEANS_JS_IS_AUTHORITY__=false;</script>
+<script defer src="/custom/logseq_copy.js?v=2"></script>
 <script defer src="/custom/click_to_filter.js?v=4"></script>
 <script defer src="/custom/boolean.js?v=1"></script>
   <script defer src="/custom/timestamp_calendar_button.js?v=1"></script>
@@ -95,3 +96,5 @@
   setTimeout(ready, 3000);
 })();
 </script>
+
+{% block extra_body_script %}{{ super() }}{% endblock %}

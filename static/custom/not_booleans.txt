@@ -1,3 +1,3 @@
-sex: id, inizio, fine, partner_id, sesh_id, orgia_id, interrotto_id,voto, luogo_id, logseq_id, dove_sborra_id, come_viene_id,  cruising_id, link
+sex: id, inizio, fine, partner_id, sesh_id, orgia_id, interrotto_id,voto, luogo_id, logseq_id, dove_sborra_id, come_viene_id,  cruising_id, link, logseq, logseq_bool, creato, edit
 calendar_range:inizio, tab, col, link, luogo_id
 partner: id
