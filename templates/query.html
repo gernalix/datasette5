@@ -7,40 +7,26 @@
       // Applica solo alla pagina /output/calendar_range
       if (!/\/output\/calendar_range(\/|$)/.test(location.pathname)) return;
 
+      
       const hideSQL = () => {
-        // Rimuovi blocchi SQL che mostrano la definizione della view
-        const rx = /CREATE\s+VIEW(\s+calendar_range)?|AS\s+SELECT/i;
+        // Solo nascondi i blocchi di SQL che mostrano la definizione della view,
+        // senza rimuovere intestazioni o intere sezioni (per non toccare "Referenced by").
+        const rx = /CREATE\s+VIEW|AS\s+SELECT/i;
         document.querySelectorAll('pre, code').forEach(el => {
-          const t = (el.textContent || "");
+          const t = (el.textContent || '');
           if (rx.test(t)) {
-            // Elimina eventuale header immediatamente precedente con testo "SQL", "View SQL", "Query"
-            const prev = el.previousElementSibling;
-            if (prev && /^H\d$/i.test(prev.tagName) && /(sql|view sql|query)/i.test(prev.textContent || "")) {
-              prev.remove();
-            }
-            // Risali per trovare un wrapper sensato e rimuoverlo
-            let node = el;
-            while (node && node.parentElement) {
-              const tag = node.tagName ? node.tagName.toLowerCase() : "";
-              if (tag === "section" || tag === "div") { node.remove(); return; }
-              node = node.parentElement;
-            }
-            el.remove();
+            el.style.display = 'none';
           }
         });
-
-        // Rimuovi "Advanced export" (se presente)
-        document.querySelectorAll('h2, h3').forEach(h => {
-          const txt = (h.textContent||"").trim().toLowerCase();
-          if (txt === "advanced export") {
-            const parent = h.parentElement;
-            const next = h.nextElementSibling;
-            if (next) next.remove();
-            h.remove();
-            if (parent && parent.children.length === 0) parent.remove();
+        // Nascondi link "View and edit SQL" senza toccare altro
+        Array.from(document.querySelectorAll('a, button')).forEach(el => {
+          const txt = (el.textContent || '').trim().toLowerCase();
+          if (txt === 'view and edit sql' || txt === 'view sql' || txt === 'sql') {
+            el.style.display = 'none';
           }
         });
       };
+    
 
       hideSQL();
       new MutationObserver(hideSQL).observe(document.body, { childList: true, subtree: true });

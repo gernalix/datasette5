@@ -61,9 +61,10 @@
 }
 
 /* 5) Nascondi eventuali layout “card” del tema responsive */
-.row-card,
-.row-wrapper,
-.card,
-.record-card {
+/* Nascondi layout 'card' solo nelle pagine TABELLA, non nelle pagine RIGA */
+body[class*="table-"] .row-card,
+body[class*="table-"] .row-wrapper,
+body[class*="table-"] .card,
+body[class*="table-"] .record-card {
   display: none !important;
 }

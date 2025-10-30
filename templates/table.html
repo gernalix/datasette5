@@ -3,8 +3,10 @@
 {% block extra_head %}
   {{ super() }}
   <style>
-    /* fallback per eventuali contenitori export */
-    .export-options, .advanced-export, .download-links { display: none !important; }
+    /* Nascondi solo le opzioni di export (mai la sezione "Referenced by") */
+    .export-options,
+    .advanced-export,
+    .download-links { display: none !important; }
   </style>
 {% endblock %}
 
@@ -12,79 +14,30 @@
   {{ super() }}
   <script>
     (function () {
-      // Applica solo alla view /output/calendar_range
+      // Applica solo alla tabella /output/calendar_range
       if (!/\/output\/calendar_range(\/|$)/.test(location.pathname)) return;
 
-      
-      const killViewSQL = () => {
-        // Rimuovi qualsiasi blocco SQL legato alla definizione della view
-        // Casi coperti:
-        // - <pre> o <code> che contengono "CREATE VIEW" o "CREATE VIEW calendar_range"
-        // - Sezione/parent che avvolge il blocco (h2/h3 "SQL" o simili)
-        const testers = [
-          /CREATE\s+VIEW\s+calendar_range/i,
-          /CREATE\s+VIEW/i,
-          /AS\s+SELECT/i
-        ];
-        const shouldRemove = t => testers.some(rx => rx.test(t));
-
-        // 1) Scansione aggressiva dei blocchi testuali
-        document.querySelectorAll('pre, code, .sql, .sql pre, .sql code').forEach(el => {
+      // Nascondi SOLO il testo dell'SQL della view, senza rimuovere container/sezioni
+      const hideSQL = () => {
+        const rx = /CREATE\s+VIEW|AS\s+SELECT/i;
+        document.querySelectorAll('pre, code').forEach(el => {
           const t = (el.textContent || "");
-          if (shouldRemove(t)) {
-            // Tenta di rimuovere un wrapper sensato (section/div) con eventuale heading sopra
-            let node = el;
-            // se c'è un "View SQL" o "SQL" heading immediatamente sopra, rimuovilo
-            const prev = el.previousElementSibling;
-            if (prev && /^H\d$/i.test(prev.tagName) && /sql/i.test(prev.textContent || "")) {
-              prev.remove();
-            }
-            // risali agli antenati e rimuovi il primo contenitore "section" o "div"
-            while (node && node.parentElement) {
-              const tag = node.tagName ? node.tagName.toLowerCase() : "";
-              if (tag === "section" || tag === "div") {
-                node.remove();
-                return;
-              }
-              node = node.parentElement;
-            }
-            // fallback: rimuovi solo l'elemento
-            el.remove();
-          }
+          if (rx.test(t)) el.style.display = 'none';
         });
-
-        // 2) Se rimane un header "SQL" orfano, eliminalo
-        document.querySelectorAll('h1,h2,h3,h4,h5,h6').forEach(h => {
-          const txt = (h.textContent || "").trim().toLowerCase();
-          if (txt === 'sql' || txt === 'view sql' || txt === 'query') {
-            const next = h.nextElementSibling;
-            if (!next || !/pre|code/i.test((next.tagName || ''))) {
-              h.remove();
-            }
+        // Nascondi link "View and edit SQL" senza toccare altro
+        Array.from(document.querySelectorAll('a, button')).forEach(el => {
+          const txt = (el.textContent || '').trim().toLowerCase();
+          if (txt === 'view and edit sql' || txt === 'view sql' || txt === 'sql') {
+            el.style.display = 'none';
           }
         });
       };
 
-
-      const killAdvancedExport = () => {
-        // Cerca header "Advanced export" e rimuovi l'intera sezione adiacente
-        document.querySelectorAll('h2, h3').forEach(h => {
-          const txt = (h.textContent || "").trim().toLowerCase();
-          if (txt === "advanced export") {
-            const parent = h.parentElement;
-            const next = h.nextElementSibling;
-            if (next) next.remove();
-            h.remove();
-            if (parent && parent.children.length === 0) parent.remove();
-          }
-        });
-        // fallback class-based
-        document.querySelectorAll('.export-options, .advanced-export, .download-links').forEach(n => n.remove());
-      };
-
-      const run = () => { killViewSQL(); killAdvancedExport(); };
-      run();
-      new MutationObserver(run).observe(document.body, { childList: true, subtree: true });
+      hideSQL();
+      new MutationObserver(hideSQL).observe(document.body, { childList: true, subtree: true });
     })();
   </script>
 {% endblock %}
+
+{# Importante: lascia intatta la sezione "Referenced by" del template base #}
+{% block referenced_by %}{{ super() }}{% endblock %}
