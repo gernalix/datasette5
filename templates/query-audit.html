@@ -1,0 +1,69 @@
+{% extends "default:query.html" %}
+{% block title %}Audit{% endblock %}
+{% block description %}Audit DDL & DML{% endblock %}
+{% block content %}
+{% set row = rows|first %}
+{% set ddl = (row.ddl_json or '{}')|from_json %}
+{% set dml = (row.dml_json or '{}')|from_json %}
+
+<div id="audit-root" style="background:#0f172a;color:#e5e7eb;border-radius:12px;padding:0;">
+  <div class="hdr" style="padding:12px 14px;border:1px solid #1f2937;border-radius:12px;margin-bottom:10px;">
+    <h3 style="margin:0;">Audit</h3>
+    <div class="tabs" style="display:flex;gap:6px;margin-top:8px;">
+      <button class="tab-btn active" data-tab="ddl" style="background:#0b1220;border:1px solid #1f2937;color:#e5e7eb;padding:6px 12px;border-radius:999px;cursor:pointer;">Schema (DDL)</button>
+      <button class="tab-btn" data-tab="dml" style="background:#0b1220;border:1px solid #1f2937;color:#e5e7eb;padding:6px 12px;border-radius:999px;cursor:pointer;">Dati (DML)</button>
+      <a href="/custom/audit.html" target="_blank" style="margin-left:auto;text-decoration:none;">
+        <button class="tab-btn" title="Versione statica rigenerata on-change">Static HTML</button>
+      </a>
+    </div>
+  </div>
+  <section id="sec-ddl" class="panel">
+    <table style="width:100%;border-collapse:collapse;">
+      <thead><tr><th>Timestamp</th><th>Azione</th><th>Oggetto</th><th>Tabella</th><th>Nome</th><th>SQL</th></tr></thead>
+      <tbody>
+        {% for r in (ddl.rows or []) %}
+        <tr>
+          <td><code class="inline">{{ r.ts }}</code></td>
+          <td><span class="pill obj">{{ r.action }}</span></td>
+          <td><span class="pill obj">{{ r.object_type }}</span></td>
+          <td><code class="inline">{{ r.table_name or '(n/a)' }}</code></td>
+          <td><code class="inline">{{ r.object_name or '' }}</code></td>
+          <td><pre class="sql">{{ r.sql_text or '' }}</pre></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+  <section id="sec-dml" class="panel hidden" style="display:none;">
+    <table style="width:100%;border-collapse:collapse;">
+      <thead><tr><th>Timestamp</th><th>Evento</th><th>Tabella</th><th>rowid</th><th>new_values</th><th>old_values</th></tr></thead>
+      <tbody>
+        {% for r in (dml.rows or []) %}
+        <tr>
+          <td><code class="inline">{{ r.ts }}</code></td>
+          <td><span class="pill">{{ r.event }}</span></td>
+          <td><code class="inline">{{ r.table_name }}</code></td>
+          <td><code class="inline">{{ r.rowid }}</code></td>
+          <td><details><summary>Mostra JSON</summary><pre class="json">{{ r.new_values or '' }}</pre></details></td>
+          <td><details><summary>Mostra JSON</summary><pre class="json">{{ r.old_values or '' }}</pre></details></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+</div>
+<script>
+  (function(){
+    const tabs = document.querySelectorAll('.tab-btn');
+    const secDDL = document.getElementById('sec-ddl');
+    const secDML = document.getElementById('sec-dml');
+    tabs.forEach(btn => btn.addEventListener('click', () => {
+      tabs.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const tab = btn.dataset.tab;
+      if (tab === 'ddl') { secDDL.style.display='block'; secDML.style.display='none'; }
+      else { secDDL.style.display='none'; secDML.style.display='block'; }
+    }));
+  })();
+</script>
+{% endblock %}

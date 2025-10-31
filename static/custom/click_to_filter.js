@@ -299,6 +299,9 @@ const isBooleanCol = boolCols.has(i);
       const td = e.target.closest("td"); if(!td) return;
       const tr = td.closest("tr"); if (!tr || tr.parentElement.tagName.toLowerCase()!=="tbody") return;
 
+      // Se il target è un link, lascia navigare e non filtrare
+      if (e.target.closest("a[href]")) return;
+
       // Non fare nulla sulle celle della colonna link
       if (td.classList.contains("link-cell")) return;
 

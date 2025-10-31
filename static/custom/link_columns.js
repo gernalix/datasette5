@@ -19,7 +19,14 @@
       txt.split(/\r?\n/).forEach(line => {
         const s = line.trim();
         if (!s || s.startsWith("#")) return;
-        if (s.includes(".")) set.add(s.toLowerCase());
+        if (s.includes(".")) { set.add(s.toLowerCase()); return; }
+        if (s.includes(":")) {
+          const parts = s.split(":");
+          const tbl = (parts[0]||"").trim().toLowerCase();
+          const cols = (parts[1]||"").split(",");
+          cols.forEach(c=>{ const col=(c||"").trim().toLowerCase(); if (tbl && col) set.add(`${tbl}.${col}`); });
+          return;
+        }
       });
       return set;
     } catch {
@@ -77,6 +84,10 @@
     a.title = url;
     td.appendChild(a);
     td.dataset.linkColumnsApplied = "1";
+    td.setAttribute("data-no-filter","1");
+    a.addEventListener("click",     ev => ev.stopPropagation(), true);
+    a.addEventListener("touchend",  ev => ev.stopPropagation(), true);
+    a.addEventListener("pointerup", ev => ev.stopPropagation(), true);
   }
 
   function applyOnce(tableEl, spec) {
