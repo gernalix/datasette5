@@ -2,100 +2,86 @@
 setlocal EnableExtensions EnableDelayedExpansion
 
 REM =========================================================
-REM  Auto Calendar + Datasette (HTTPS SAFE) — FINAL
-REM  - Positional args to build_calendar.py
-REM  - Absolute static mount: --static custom:"Z:\download\datasette5\static\custom"
-REM  - Conditional flags for templates/plugins/metadata
-REM  - ASCII only
+REM  Auto Calendar + Datasette (HTTPS SAFE)
+REM  - Uses venv .venv313
+REM  - Rebuilds calendar (output.db + static/custom/calendar_columns.txt)
+REM  - Launches Datasette with HTTPS if Tailscale certs exist
 REM =========================================================
 
-REM --- Project root
+REM --- Project root (this .bat's folder)
 set "ROOT=%~dp0"
 pushd "%ROOT%"
 
-REM --- Python venv
-set "PY=%ROOT%\.venv313\Scripts\python.exe"
-if not exist "%PY%" (
-  echo ERROR: Python venv not found: %PY%
+REM --- Python venv (always use .venv313)
+set "VENV=%ROOT%\.venv313\Scripts\python.exe"
+if not exist "%VENV%" (
+  echo [ERR] VENV non trovato: %VENV%
   goto :error
 )
 
-REM --- Params
-set "HOST=0.0.0.0"
-set "PORT=8001"
-set "BASE_URL=/"
-set "DB=output.db"
-set "LIST_PATH=static\custom\calendar_columns.txt"
+REM --- Canonical paths
+set "DB=%ROOT%\output.db"
+set "CUSTOM=%ROOT%\static\custom"
+set "CALTXT=%CUSTOM%\calendar_columns.txt"
+set "TEMPLATES=%ROOT%\templates"
+set "METADATA=%ROOT%\metadata.json"
 
-REM --- Absolute static dir
-set "STATIC_DIR=%ROOT%static\custom"
+REM --- Tailscale cert locations (prefer ProgramData; fallback to user PEM if present)
+set "TS_CRT=C:\ProgramData\Tailscale\certs\daniele.tail6b4058.ts.net.crt"
+set "TS_KEY=C:\ProgramData\Tailscale\certs\daniele.tail6b4058.ts.net.key"
+set "TS_PEM=C:\Users\seste\daniele.tail6b4058.ts.net.pem"
 
-REM --- Optional HTTPS
-set "SSL_KEY=%ROOT%ssl\server-key.pem"
-set "SSL_CRT=%ROOT%ssl\server-crt.pem"
-set "USE_HTTPS=0"
-if exist "%SSL_KEY%" if exist "%SSL_CRT%" set "USE_HTTPS=1"
+set "SSL_CERTFILE="
+set "SSL_KEYFILE="
 
-echo =========================================================
-echo Start Auto Calendar + Datasette (HTTPS SAFE)
-echo Folder: %ROOT%
-echo Port:   %PORT%
-echo BaseURL:%BASE_URL%
-echo Static: %STATIC_DIR%
-echo =========================================================
-
-REM --- 1) Build calendar (positional args expected by your script)
-if exist "%ROOT%scripts\build_calendar.py" (
-  echo Running build_calendar.py
-  echo   DB:        %ROOT%%DB%
-  echo   LIST_PATH: %ROOT%%LIST_PATH%
-  echo   BASE_URL:  %BASE_URL%
-  "%PY%" "%ROOT%scripts\build_calendar.py" "%ROOT%%DB%" "%ROOT%%LIST_PATH%" --base-path "%BASE_URL%"
-  if errorlevel 1 (
-    echo WARN: build_calendar.py returned code %ERRORLEVEL%
-  ) else (
-    echo OK: calendar build completed
+if exist "%TS_CRT%" if exist "%TS_KEY%" (
+  set "SSL_CERTFILE=%TS_CRT%"
+  set "SSL_KEYFILE=%TS_KEY%"
+) else (
+  REM Optional fallback if you really want to use a combined PEM for other tools.
+  if exist "%TS_PEM%" (
+    REM Uvicorn/Datasette DO NOT accept a combined PEM directly.
+    REM We still leave SSL_* empty here to force HTTP rather than a broken HTTPS.
+    echo [WARN] Trovato solo PEM combinato: %TS_PEM% (verra' ignorato)
   )
-) else (
-  echo NOTE: scripts\build_calendar.py not found, skipping calendar build
 )
 
-REM --- 2) Conditional flags
-set "TEMPLATES_FLAG="
-if exist "%ROOT%templates" set "TEMPLATES_FLAG=--template-dir templates"
+REM --- Build calendar (positional args: DB, TEXT, then options)
+echo ========================================================
+echo Rigenero calendario…
+"%VENV%" "%ROOT%\scripts\build_calendar.py" "%DB%" "%CALTXT%" --base-path "/"
+if errorlevel 1 (
+  echo [ERR] build_calendar.py fallito.
+  goto :error
+)
+echo [OK] Calendario rigenerato.
 
-set "PLUGINS_FLAG="
-if exist "%ROOT%plugins" set "PLUGINS_FLAG=--plugins-dir plugins"
+REM --- Launch Datasette via helper (always via HTTPS if certs found)
+set "DATASETTE_HOST=0.0.0.0"
+set "DATASETTE_PORT=8001"
 
-set "METADATA_FLAG="
-if exist "%ROOT%metadata.json" set "METADATA_FLAG=--metadata metadata.json"
-
-REM --- 3) Build Datasette command with absolute static mount
-set "CMD=%PY% -m datasette "%DB%" --host %HOST% --port %PORT% --setting base_url %BASE_URL% --static custom:""%STATIC_DIR%"" %TEMPLATES_FLAG% %PLUGINS_FLAG% %METADATA_FLAG%"
-
-if "%USE_HTTPS%"=="1" (
-  set "CMD=%CMD% --ssl-key "%SSL_KEY%" --ssl-cert "%SSL_CRT%""
-  echo HTTPS enabled
+if defined SSL_CERTFILE if defined SSL_KEYFILE (
+  echo [INFO] Certificati trovati. Avvio HTTPS.
+  "%VENV%" "%ROOT%\scripts\launch_datasette.py" --host "%DATASETTE_HOST%" --port "%DATASETTE_PORT%" --ssl-certfile "%SSL_CERTFILE%" --ssl-keyfile "%SSL_KEYFILE%"
 ) else (
-  echo HTTPS not enabled (ssl key/cert not found)
+  echo [WARN] Certificati non trovati. Avvio in HTTP.
+  "%VENV%" "%ROOT%\scripts\launch_datasette.py" --host "%DATASETTE_HOST%" --port "%DATASETTE_PORT%"
 )
 
+set "EC=%ERRORLEVEL%"
 echo.
-echo Starting Datasette...
-echo %CMD%
-cmd /c %CMD%
+if %EC% NEQ 0 (
+  echo [ERR] Datasette terminato con codice %EC%.
+  goto :error
+)
 
-echo.
-echo Links:
-echo   Audit standalone: http://localhost:%PORT%/-/static/custom/audit/Audit.html
-echo   Audit (base_url /output): http://localhost:%PORT%/output/-/static/custom/audit/Audit.html
-echo   Pages redirect (if present): http://localhost:%PORT%/-/pages/audit
+echo [FINE] Auto Calendar + Datasette terminato con successo.
 echo.
 goto :end
 
 :error
 echo.
-echo FAILED - check venv or paths.
+echo FAILED - verifica venv/certs/percorso.
 popd
 exit /b 1
 

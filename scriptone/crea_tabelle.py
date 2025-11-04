@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# crea_tabelle.py - versione completa con menu numerici, rebuild minimo e switch connessione
+# crea_tabelle.py — versione completa con menu Modifica, sweep tmp, rebuild safe e diagnostica
 
 import sys
 import sqlite3
@@ -7,32 +7,15 @@ from pathlib import Path
 import re
 from typing import List, Tuple, Optional, Dict
 
+# Percorsi
 HERE = Path(__file__).resolve().parent
 DB_PATH = HERE / "noutput.db"
 TRIGGERS_PATH = HERE / "triggers.sql"
 CONFIG_PATH = HERE / "crea_tabelle.config.json"
 
-# Switch: se True, crea una NUOVA connessione per OGNI azione del sottomenu "Modifica tabella".
+# Switch: se True, crea una NUOVA connessione per OGNI azione nel sottomenu "Modifica tabella".
 # Se False, mantiene una singola connessione per tutta la durata del sottomenu.
 REOPEN_PER_ACTION = False
-
-# ------------- Config persistence -------------
-import json
-
-def load_config():
-    cfg = {}
-    try:
-        if CONFIG_PATH.exists():
-            cfg = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
-    except Exception:
-        cfg = {}
-    return cfg
-
-def save_config(cfg: dict):
-    try:
-        CONFIG_PATH.write_text(json.dumps(cfg, indent=2, ensure_ascii=False), encoding="utf-8")
-    except Exception as e:
-        print(f"[WARN] Impossibile salvare la config: {e}")
 
 # --------------------------- Utilità console ---------------------------
 
@@ -55,104 +38,31 @@ def ask(prompt: str) -> str:
 def mode_label() -> str:
     return "PER-AZIONE (riuso=NO)" if REOPEN_PER_ACTION else "RIUSO (riuso=SÌ)"
 
+# --------------------------- Config persistence ---------------------------
+import json
 
-from contextlib import contextmanager
-
-# --------------------------- Helper di errore e input ---------------------------
-
-def explain_sqlite_error(e: Exception) -> str:
-    msg = str(e) or e.__class__.__name__
-    low = msg.lower()
-    if "unique constraint" in low or "is not unique" in low:
-        return "Violazione UNIQUE: esistono valori duplicati o l'indice UNIQUE esistente impedisce l'operazione."
-    if "foreign key constraint" in low or "foreign key mismatch" in low:
-        return "Violazione FOREIGN KEY: esistono righe figlie orfane oppure la referenza non combacia con la tabella padre."
-    if "no such column" in low:
-        return "Colonna inesistente in uno statement o in un trigger; aggiorna i trigger/DDL coerentemente al nuovo schema."
-    if "no such table" in low:
-        return "Tabella inesistente: assicurati che sia stata creata prima dell'operazione."
-    if "datatype mismatch" in low:
-        return "Incompatibilità di tipo: i dati esistenti non rispettano il nuovo tipo richiesto."
-    if "not null constraint failed" in low:
-        return "Violazione NOT NULL: almeno una riga ha un valore NULL dove non è permesso."
-    if "database is locked" in low:
-        return "Database bloccato: un altro processo/connessione ha un lock attivo."
-    if "cannot add a NOT NULL column" in low:
-        return "Aggiunta colonna NOT NULL senza default non consentita: fornisci un DEFAULT o ricrea la tabella."
-    return msg
-
-def print_exception_context(context: str, e: Exception):
-    print(f"[ERRORE] {context}: {e}")
+def load_config() -> dict:
+    cfg = {}
     try:
-        print(f"[HINT] {explain_sqlite_error(e)}")
+        if CONFIG_PATH.exists():
+            cfg = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
     except Exception:
-        pass
+        cfg = {}
+    return cfg
 
-def ask_int_list(prompt: str, allowed_min: int = 1, allowed_max: int = 10_000, require_permutation: bool = False):
-    raw = ask(prompt).strip()
-    if not raw:
-        return None
+def save_config(cfg: dict) -> None:
     try:
-        idxs = [int(x.strip()) for x in raw.split(",") if x.strip()]
-    except Exception:
-        print("[ERRORE] Inserire numeri separati da virgola."); return None
-    if any(i < allowed_min or i > allowed_max for i in idxs):
-        print("[ERRORE] Indice fuori range."); return None
-    if require_permutation:
-        if sorted(idxs) != list(range(allowed_min, allowed_max + 1)):
-            print("[ERRORE] Devono essere una permutazione completa."); return None
-    return idxs
+        CONFIG_PATH.write_text(json.dumps(cfg, ensure_ascii=False, indent=2), encoding="utf-8")
+    except Exception as e:
+        print(f"[WARN] Impossibile salvare {CONFIG_PATH.name}: {e}")
 
-def list_current_columns(conn: sqlite3.Connection, table: str):
-    return [c for c in get_columns(conn, table) if c not in ("id","logseq")]
-
-@contextmanager
-def action_connection(persistent_conn: Optional[sqlite3.Connection] = None):
-    if REOPEN_PER_ACTION or persistent_conn is None:
-        with connect_db() as c:
-            yield c
-    else:
-        yield persistent_conn
-
-def print_banner(title: str, table: Optional[str] = None):
-    line = "=" * 50
-    print(line)
-    if table:
-        print(f"{title}: {table}")
-    else:
-        print(title)
-    print(line)
+def _init_mode_from_config():
+    global REOPEN_PER_ACTION
+    cfg = load_config()
+    if isinstance(cfg.get("reopen_per_action"), bool):
+        REOPEN_PER_ACTION = cfg["reopen_per_action"]
 
 # --------------------------- DB helpers ---------------------------
-
-# --------------------------- Audit schema helpers ---------------------------
-
-def ensure_audit_schema_table(conn: sqlite3.Connection):
-    conn.execute(
-        '''CREATE TABLE IF NOT EXISTS audit_schema (
-               id INTEGER PRIMARY KEY AUTOINCREMENT,
-               ts TEXT DEFAULT (CURRENT_TIMESTAMP),
-               action TEXT NOT NULL,
-               table_name TEXT,
-               details TEXT  -- JSON leggibile su Datasette
-           );'''
-    )
-
-def get_create_table_sql(conn: sqlite3.Connection, table: str) -> str:
-    row = conn.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name=?", (table,)).fetchone()
-    return (row["sql"] if row and row["sql"] else "")
-
-def log_schema_change(conn: sqlite3.Connection, action: str, table: str, details: dict):
-    try:
-        ensure_audit_schema_table(conn)
-        conn.execute(
-            "INSERT INTO audit_schema(action, table_name, details) VALUES(?,?,?)",
-            (action, table, json.dumps(details, ensure_ascii=False))
-        )
-    except Exception as e:
-        # Non bloccare il flusso di lavoro se il log fallisce
-        print(f"[WARN] Impossibile scrivere audit_schema per {action} su {table}: {e}")
-
 
 def connect_db() -> sqlite3.Connection:
     conn = sqlite3.connect(str(DB_PATH))
@@ -160,8 +70,6 @@ def connect_db() -> sqlite3.Connection:
     conn.execute("PRAGMA foreign_keys = ON;")
     conn.execute("PRAGMA recursive_triggers = ON;")
     return conn
-
-
 
 def sweep_stale_tmp_tables():
     """Rimuove eventuali tabelle temporanee __tmp__rebuild residue da tentativi falliti."""
@@ -179,6 +87,7 @@ def sweep_stale_tmp_tables():
                     print(f"[WARN] Impossibile rimuovere tmp residua {tname}: {e}")
     except Exception:
         pass
+
 def table_exists(conn: sqlite3.Connection, table: str) -> bool:
     row = conn.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?;", (table,)).fetchone()
     return row is not None
@@ -208,11 +117,16 @@ def get_index_sqls(conn: sqlite3.Connection, table: str) -> List[str]:
             sqls.append(src["sql"])
     return sqls
 
+def get_index_create_statements(conn: sqlite3.Connection, table: str) -> List[str]:
+    """Compat: restituisce le CREATE INDEX per la tabella.
+    Alias di get_index_sqls per il resto del codice."""
+    return get_index_sqls(conn, table)
+
+
 def drop_trigger_if_exists(conn: sqlite3.Connection, name: str):
     row = conn.execute("SELECT 1 FROM sqlite_master WHERE type='trigger' AND name=?;", (name,)).fetchone()
     if row:
         conn.execute(f'DROP TRIGGER "{name}"')
-
 
 # --------------------------- Diagnostica errori ---------------------------
 
@@ -225,14 +139,13 @@ def _fk_violations_report(conn: sqlite3.Connection, table: str, limit: int = 10)
         return "Nessuna violazione FK rilevata da PRAGMA foreign_key_check."
     out = [f"Violazioni FK su '{table}' (max {limit}):"]
     for i, r in enumerate(rows[:limit], 1):
-        # r: (table,rowid,parent,foreign_key_index) -- row-like access may vary
         try:
             t = r[0]; rowid = r[1]; parent = r[2]
         except Exception:
             t = getattr(r, 'table', '?'); rowid = getattr(r, 'rowid', '?'); parent = getattr(r, 'parent', '?')
         out.append(f"  {i}) tabella={t} rowid={rowid} parent={parent}")
         try:
-            rec = conn.execute(f'SELECT * FROM \"{t}\" WHERE rowid=?', (rowid,)).fetchone()
+            rec = conn.execute(f'SELECT * FROM "{t}" WHERE rowid=?', (rowid,)).fetchone()
             if rec is not None:
                 cols = rec.keys()
                 data = ', '.join([f'{c}={rec[c]!r}' for c in cols])
@@ -248,7 +161,7 @@ def _unique_violations_report(conn: sqlite3.Connection, table: str, cols: list, 
     out = [f"Possibili duplicati che impediscono UNIQUE su {cols}:"]
     for c in cols:
         try:
-            q = f'SELECT \"{c}\", COUNT(*) as cnt FROM \"{table}\" GROUP BY \"{c}\" HAVING cnt>1 ORDER BY cnt DESC LIMIT {sample}'
+            q = f'SELECT "{c}", COUNT(*) as cnt FROM "{table}" GROUP BY "{c}" HAVING cnt>1 ORDER BY cnt DESC LIMIT {sample}'
             dups = conn.execute(q).fetchall()
             if dups:
                 for val, cnt in dups:
@@ -258,6 +171,7 @@ def _unique_violations_report(conn: sqlite3.Connection, table: str, cols: list, 
         except Exception as e:
             out.append(f"  col={c} → errore nel conteggio: {e}")
     return "\n".join(out)
+
 # --------------------------- Trigger handling ---------------------------
 
 def alias_column(col: str) -> str:
@@ -292,8 +206,8 @@ def render_triggers_sql(template: str, table: str, cols: List[str], logseq_col: 
 
     sql = template.format(**ctx)
 
-    # Rimuovi blocco/trigger set_logseq_random se presenti
-    sql = re.sub(r"-- === SET LOGSEQ RANDOM ================================.*?(?=(\n-- ===|$))", "", sql, flags=re.DOTALL)
+    # Rimuovi eventuale blocco/trigger set_logseq_random
+    sql = re.sub(r"-- === SET LOGSEQ RANDOM ================================.*?(?=(-- ===|$))", "", sql, flags=re.DOTALL)
     trig_name = ctx["trigger_name_logseq"]
     sql = re.sub(rf"CREATE\s+TRIGGER\s+{re.escape(trig_name)}.*?END;", "", sql, flags=re.DOTALL | re.IGNORECASE)
 
@@ -325,7 +239,7 @@ def parse_columns_spec(spec: str) -> List[Tuple[str, str, bool]]:
     if not spec.strip():
         return out
     for p in [p.strip() for p in spec.split(",")]:
-        if not p: 
+        if not p:
             continue
         m = re.match(r'^([A-Za-z_][A-Za-z0-9_]*)\s+([irtIRT])([zZ])?$', p)
         if not m:
@@ -370,14 +284,6 @@ def create_table_with_columns(conn: sqlite3.Connection, table: str, cols_spec: L
     conn.execute(ddl)
     conn.commit()
 
-    try:
-        log_schema_change(conn, "CREATE_TABLE", table, {
-            "columns": [c[0] for c in cols_spec],
-            "fks": [{"col": c, "ref_table": rt, "ref_col": rc} for (c, rt, rc) in fks]
-        })
-    except Exception:
-        pass
-
 # --------------------------- FK utils ---------------------------
 
 def detect_foreign_keys(cols_spec: List[Tuple[str, str, bool]]) -> List[Tuple[str, str, str]]:
@@ -394,57 +300,23 @@ def ensure_fk_tables(conn: sqlite3.Connection, fk_list: List[Tuple[str, str, str
             create_base_table(conn, ref_table)
             apply_triggers_to_table(conn, ref_table)
 
-            try:
-                log_schema_change(conn, "CREATE_TABLE_AUTO_FK", ref_table, {})
-            except Exception:
-                pass
+# --------------------------- AUTOINCREMENT helpers ---------------------------
 
-# --------------------------- Rebuild (ricreazione tabella) ---------------------------
-
-def _column_def_from_info(col: sqlite3.Row, override_type: Optional[str]=None) -> str:
-    name = col["name"]
-    ctype = override_type or (col["type"] or "TEXT")
-    notnull = " NOT NULL" if col["notnull"] else ""
-    dflt = col["dflt_value"]
-    dflt_sql = f" DEFAULT {dflt}" if dflt is not None else ""
-    if name == "id":
-        return '"id" INTEGER PRIMARY KEY AUTOINCREMENT'
-    if name == "logseq":
-        return '"logseq" TEXT DEFAULT (hex(randomblob(5)))'
-    return f'"{name}" {ctype}{notnull}{dflt_sql}'
-
-def get_index_create_statements(conn: sqlite3.Connection, table: str) -> List[str]:
-    idx_rows = conn.execute(f"PRAGMA index_list('{table}')").fetchall()
-    stmts: List[str] = []
-    for r in idx_rows:
-        name = r["name"]
-        src = conn.execute("SELECT sql FROM sqlite_master WHERE type='index' AND name=?", (name,)).fetchone()
-        if src and src["sql"]:
-            stmts.append(src["sql"])
-    return stmts
-
-
-def _get_sqlite_sequence(conn: sqlite3.Connection, table: str) -> int | None:
-    """Restituisce l'attuale contatore AUTOINCREMENT per 'table' (sqlite_sequence.seq) se esiste."""
+def read_autoincrement_seq(conn: sqlite3.Connection, table: str) -> int | None:
+    """Legge il valore corrente della sequenza AUTOINCREMENT per la tabella da sqlite_sequence."""
     try:
         row = conn.execute('SELECT seq FROM sqlite_sequence WHERE name=?', (table,)).fetchone()
-        if row:
-            # alcune versioni restituiscono una Row indicizzata per nome o posizione
-            try:
-                return row[0] if isinstance(row[0], int) else int(row[0])
-            except Exception:
-                try:
-                    return int(row["seq"])
-                except Exception:
-                    return None
-        return None
-    except sqlite3.OperationalError:
-        # sqlite_sequence potrebbe non esistere (se non c'è ancora nessuna tabella con AUTOINCREMENT)
+        if row is None:
+            return None
+        return row[0] if isinstance(row, tuple) else row['seq']
+    except Exception:
         return None
 
-def _set_sqlite_sequence(conn: sqlite3.Connection, table: str, seq_value: int) -> None:
-    """Imposta il contatore AUTOINCREMENT (sqlite_sequence) su 'seq_value' per la tabella indicata.
-    Se la riga non esiste, la crea; altrimenti la aggiorna."""
+
+def restore_autoincrement_seq(conn: sqlite3.Connection, table: str, seq_value: Optional[int]) -> None:
+    """Ripristina esattamente la seq precedente (se disponibile) nella sqlite_sequence."""
+    if seq_value is None:
+        return
     try:
         exists = conn.execute('SELECT 1 FROM sqlite_sequence WHERE name=?', (table,)).fetchone()
         if exists:
@@ -452,43 +324,92 @@ def _set_sqlite_sequence(conn: sqlite3.Connection, table: str, seq_value: int) -
         else:
             conn.execute('INSERT INTO sqlite_sequence(name, seq) VALUES(?, ?)', (table, seq_value))
     except sqlite3.OperationalError:
-        # sqlite_sequence potrebbe non esistere ancora; in tal caso verrà creata automaticamente
-        # alla prima tabella con AUTOINCREMENT. Non possiamo forzarla senza DDL interno.
+        # se sqlite_sequence non esiste ancora, ignora
         pass
 
-def _preserve_autoincrement_counter(conn: sqlite3.Connection, table: str, old_max_id: int | None) -> None:
-    """Preserva il contatore AUTOINCREMENT dopo una ricostruzione.
-    Sceglie il valore massimo tra:
-      - il seq precedente salvato in sqlite_sequence (se presente)
-      - MAX(id) calcolato sulla tabella originale prima della drop
-    e lo ripristina per la tabella ricreata."
-    """
-    # Leggi l'eventuale sequenza precedente (può essere None)
-    prev_seq = _get_sqlite_sequence(conn, table)
-    target = None
-    if old_max_id is not None and isinstance(old_max_id, (int,)) and old_max_id >= 0:
-        target = old_max_id
-    if prev_seq is not None:
-        target = max(prev_seq if target is None else target, prev_seq)
-    if target is not None:
-        _set_sqlite_sequence(conn, table, int(target))
+
+def fetch_max_id(conn: sqlite3.Connection, table: str):
+    # Deprecated: preserviamo la seq originale da sqlite_sequence, non MAX(id)
+    return None
 
 
+
+def restore_autoincrement_seq(conn: sqlite3.Connection, table: str, max_id: Optional[int]) -> None:
+    if max_id is None:
+        return
+    try:
+        exists = conn.execute('SELECT 1 FROM sqlite_sequence WHERE name=?', (table,)).fetchone()
+        if exists:
+            conn.execute('UPDATE sqlite_sequence SET seq=? WHERE name=?', (max_id, table))
+        else:
+            conn.execute('INSERT INTO sqlite_sequence(name, seq) VALUES(?, ?)', (table, max_id))
+    except sqlite3.OperationalError:
+        # sqlite_sequence may not exist if AUTOINCREMENT hasn't been created yet
+        pass
+
+# --------------------------- Rebuild (ricreazione tabella) ---------------------------
+
+def generic_rebuild(conn: sqlite3.Connection, table: str, new_defs: List[str], fk_clause: List[str], copy_cols: List[str], idx_sqls: List[str]) -> None:
+    """Generic rebuild primitive that preserves AUTOINCREMENT and re-applies indices and triggers.
+    Other features should delegate to this to avoid code duplication."""
+    tmp = f"{table}__tmp__rebuild"
+    with conn:
+        _prev_seq = read_autoincrement_seq(conn, table)
+        conn.execute(f'DROP TABLE IF EXISTS "{tmp}"')
+        try:
+            ddl = f'CREATE TABLE "{tmp}" (\n  ' + ",\n  ".join(new_defs + fk_clause) + "\n);"
+            conn.execute(ddl)
+
+            col_list = ", ".join(f'"{c}"' for c in copy_cols)
+            try:
+                conn.execute(f'INSERT INTO "{tmp}" ({col_list}) SELECT {col_list} FROM "{table}"')
+            except sqlite3.IntegrityError as e:
+                print(f"[ERRORE] Inserimento dati nel tmp fallito: {e}")
+                print(_fk_violations_report(conn, table))
+                raise
+
+            conn.execute(f'DROP TABLE "{table}"')
+            conn.execute(f'ALTER TABLE "{tmp}" RENAME TO "{table}"')
+
+            restore_autoincrement_seq(conn, table, _prev_seq)
+
+            for sql in idx_sqls:
+                try:
+                    conn.execute(sql)
+                except Exception as e:
+                    print(f"[WARN] Ricreazione indice fallita, lo salto: {e}")
+
+            apply_triggers_to_table(conn, table)
+        finally:
+            try:
+                conn.execute(f'DROP TABLE IF EXISTS "{tmp}"')
+            except Exception:
+                pass
+
+
+
+def _column_def_from_info(info: sqlite3.Row, override_type: str | None = None) -> str:
+    """Costruisce il DDL di una colonna a partire dal risultato di PRAGMA table_info.
+    - Mantiene NOT NULL e DEFAULT
+    - Ignora vincoli PK (gestiamo 'id' a parte)
+    - Consente override del tipo via override_type"""
+    name = info[1] if isinstance(info, tuple) else info['name']
+    ctype = (override_type or (info[2] if isinstance(info, tuple) else info['type']) or 'TEXT').strip()
+    notnull = (info[3] if isinstance(info, tuple) else info['notnull'])
+    dflt = (info[4] if isinstance(info, tuple) else info['dflt_value'])
+    parts = [f'"{name}" {ctype}']
+    if notnull:
+        parts.append('NOT NULL')
+    if dflt is not None:
+        # dflt_value può essere già quotato o una funzione; non alterarlo
+        parts.append(f'DEFAULT {dflt}')
+    return ' '.join(parts)
 def recreate_table_with_mapping(conn: sqlite3.Connection, table: str,
                                 new_order: List[str],
                                 type_overrides: Optional[Dict[str,str]]=None,
                                 add_fk_cols: Optional[List[str]]=None):
-    """
-    Ricrea la tabella 'table' applicando:
-      - nuovo ordine colonne (escludendo id/logseq),
-      - override di tipo colonna,
-      - aggiunta di FOREIGN KEY per colonne *_id,
-    preservando:
-      - dati,
-      - indici,
-      - trigger audit,
-      - contatore AUTOINCREMENT (sqlite_sequence).
-    """
+    """Ricrea la tabella solo quando necessario (riordino/cambio tipo/aggiunta FK),
+    salvando dati, indici, trigger e AUTOINCREMENT."""
     type_overrides = type_overrides or {}
     add_fk_cols = add_fk_cols or []
 
@@ -498,124 +419,33 @@ def recreate_table_with_mapping(conn: sqlite3.Connection, table: str,
     if not new_order:
         new_order = existing_other_cols[:]
 
-    # Validazione colonne richieste
     for c in new_order:
         if c not in name_to_info:
             raise RuntimeError(f"Colonna inesistente: {c}")
 
-    # FK esistenti + eventuali nuove *_id
     fk_existing = get_fks(conn, table)
     fk_defs = [(r["from"], r["table"], r["to"] or "id") for r in fk_existing]
-    for col in add_fk_cols:
-        if col.endswith("_id") and col in name_to_info:
-            fk_defs.append((col, col[:-3], "id"))
 
-    # Definizione colonne nuova tabella
-    new_defs: List[str] = [
-        '"id" INTEGER PRIMARY KEY AUTOINCREMENT',
-        '"logseq" TEXT DEFAULT (hex(randomblob(5)))'
-    ]
+    for col in add_fk_cols:
+        if not col.endswith("_id") or col not in name_to_info:
+            continue
+        fk_defs.append((col, col[:-3], "id"))
+
+    new_defs: List[str] = []
+    new_defs.append('"id" INTEGER PRIMARY KEY AUTOINCREMENT')
+    new_defs.append('"logseq" TEXT DEFAULT (hex(randomblob(5)))')
     for c in new_order:
         info = name_to_info[c]
         new_defs.append(_column_def_from_info(info, override_type=type_overrides.get(c)))
 
     fk_clause = [f'FOREIGN KEY ("{c}") REFERENCES "{rt}"("{rc}")' for (c,rt,rc) in fk_defs]
 
-    # Indici da ricreare
     idx_sqls = get_index_create_statements(conn, table)
 
-    tmp = f"{table}__tmp__rebuild"
-    with conn:
-        # Pulisci eventuali residui
-        conn.execute(f'DROP TABLE IF EXISTS "{tmp}"')
-        try:
-            # 1) Crea tabella temporanea
-            ddl = f'CREATE TABLE "{tmp}" (\n  ' + ",\n  ".join(new_defs + fk_clause) + "\n);"
-            conn.execute(ddl)
+    copy_cols = ["id","logseq"] + new_order
+    generic_rebuild(conn, table, new_defs, fk_clause, copy_cols, idx_sqls)
 
-            # 2) Copia dati in ordine di colonne
-            copy_cols = ["id","logseq"] + new_order
-            col_list = ", ".join(f'"{c}"' for c in copy_cols)
-            try:
-                conn.execute(f'INSERT INTO "{tmp}" ({col_list}) SELECT {col_list} FROM "{table}"')
-            except sqlite3.IntegrityError as e:
-                print(f"[ERRORE] Inserimento dati nel tmp fallito: {e}")
-                print(_fk_violations_report(conn, table))
-                raise
-
-            # 3) Salva max(id) PRIMA di droppare l'originale
-            row = conn.execute(f'SELECT MAX("id") AS m FROM "{table}"').fetchone()
-            max_id = row["m"] if row else None
-
-            # Leggi il vecchio contatore AUTOINCREMENT PRIMA del drop
-            prev_seq = _get_sqlite_sequence(conn, table)
-
-            # 4) Rinomina tmp -> tabella originale
-            conn.execute(f'DROP TABLE "{table}"')
-            conn.execute(f'ALTER TABLE "{tmp}" RENAME TO "{table}"')
-
-            # 5) Ripristina contatore AUTOINCREMENT
-            if prev_seq is not None:
-                _set_sqlite_sequence(conn, table, int(prev_seq))
-            elif max_id is not None:
-                _set_sqlite_sequence(conn, table, int(max_id))
-
-            # 6) Ricrea indici
-            for sql in idx_sqls:
-                try:
-                    conn.execute(sql)
-                except Exception as e:
-                    print(f"[WARN] Ricreazione indice fallita, lo salto: {e}")
-
-            # 7) Re-applica trigger audit
-            apply_triggers_to_table(conn, table)
-
-            
-                        # Audit logging della ricostruzione (solo dettagli minimi)
-            try:
-                did_type = bool(type_overrides)
-                did_fk = bool(add_fk_cols)
-                # Il riordino si intende solo se l'ordine richiesto è diverso dall'attuale
-                try:
-                    current_order = [c for c in get_columns(conn, table) if c not in ("id","logseq")]
-                except Exception:
-                    current_order = None
-                did_reorder = (current_order is None) or (list(new_order) != list(current_order))
-                
-                changed = []
-                if did_type: changed.append("CHANGE_TYPE")
-                if did_fk: changed.append("ADD_FOREIGN_KEYS")
-                if did_reorder: changed.append("REORDER_COLUMNS")
-                
-                if len(changed) == 1:
-                    action = changed[0]
-                    if action == "REORDER_COLUMNS":
-                        details = {"new_order": new_order}
-                    elif action == "CHANGE_TYPE":
-                        details = {"type_overrides": type_overrides}
-                    else:  # ADD_FOREIGN_KEYS
-                        details = {"add_fk_cols": add_fk_cols}
-                else:
-                    # Più modifiche insieme: logga REBUILD_TABLE con soli campi che hanno davvero cambiato
-                    action = "REBUILD_TABLE"
-                    details = {}
-                    if did_type:
-                        details["type_overrides"] = type_overrides
-                    if did_fk:
-                        details["add_fk_cols"] = add_fk_cols
-                    if did_reorder:
-                        details["new_order"] = new_order
-                
-                log_schema_change(conn, action, table, details)
-            except Exception:
-                pass
-
-        finally:
-            # Best-effort: elimina tmp se rimasta
-            try:
-                conn.execute(f'DROP TABLE IF EXISTS "{tmp}"')
-            except Exception:
-                pass
+# --------------------------- Menu: Aggiungi tabella ---------------------------
 
 def menu_aggiungi_tabella():
     print_header("MENU — Aggiungi tabella")
@@ -676,14 +506,6 @@ def _rename_table_and_update_triggers(conn: sqlite3.Connection, old: str, new: s
         print(f"[OK] Tabella rinominata: {old} → {new}")
         apply_triggers_to_table(conn, new)
 
-        try:
-            log_schema_change(conn, "RENAME_TABLE", new, {
-                "old_name": old,
-                "new_name": new
-            })
-        except Exception:
-            pass
-
         # Aggiorna i trigger testuali nel DB
         rows = conn.execute("SELECT name, sql FROM sqlite_master WHERE type='trigger' AND sql IS NOT NULL").fetchall()
         for r in rows:
@@ -707,13 +529,6 @@ def _rename_columns_simple(conn: sqlite3.Connection, table: str, mapping: List[T
             print(f"[INFO] Rinomino colonna: {old} → {new}")
             conn.execute(f'ALTER TABLE "{table}" RENAME COLUMN "{old}" TO "{new}"')
         apply_triggers_to_table(conn, table)
-
-        try:
-            log_schema_change(conn, "RENAME_COLUMN", table, {
-            "pairs": pairs
-        })
-        except Exception:
-            pass
     print("[FATTO] Rinomina colonne completata.")
 
 def _fetch_unique_singlecol_indexes(conn: sqlite3.Connection, table: str) -> Dict[str, List[str]]:
@@ -753,11 +568,9 @@ def _toggle_unique_indexes(conn: sqlite3.Connection, table: str, cols: List[str]
                     except Exception:
                         pass
 
-
-
 def menu_modifica_tabella():
     print_header("MENU — Modifica tabella")
-    # scegli tabella con una connessione effimera (non importa la modalità)
+    # scegli tabella con una connessione effimera
     with connect_db() as conn_select:
         table = _select_table_interactive(conn_select)
     if not table:
@@ -807,7 +620,7 @@ def menu_modifica_tabella():
                         print("Colonne disponibili:")
                         for i, c in enumerate(current, 1):
                             print(f"  {i}) {c}")
-                        raw = ask('Mappature "<num> nuovo_nome" separate da virgola (es: 1 mele, 4 banane):\\n> ').strip()
+                        raw = ask('Mappature "<num> nuovo_nome" separate da virgola (es: 1 mele, 4 banane):\n> ').strip()
                         if not raw: continue
                         pairs: List[Tuple[str,str]] = []
                         for part in raw.split(","):
@@ -834,7 +647,7 @@ def menu_modifica_tabella():
                     print("Colonne disponibili:")
                     for i, c in enumerate(current, 1):
                         print(f"  {i}) {c}")
-                    raw = ask('Mappature "<num> nuovo_nome" separate da virgola (es: 1 mele, 4 banane):\\n> ').strip()
+                    raw = ask('Mappature "<num> nuovo_nome" separate da virgola (es: 1 mele, 4 banane):\n> ').strip()
                     if not raw: continue
                     pairs: List[Tuple[str,str]] = []
                     for part in raw.split(","):
@@ -863,7 +676,7 @@ def menu_modifica_tabella():
                         print("Colonne disponibili:")
                         for i, c in enumerate(current, 1):
                             print(f"  {i}) {c}")
-                        raw = ask('Inserisci "<num> i/r/t" (es: 2 t):\\n> ').strip()
+                        raw = ask('Inserisci "<num> i/r/t" (es: 2 t):\n> ').strip()
                         m = re.match(r'^(\d+)\s+([irtIRT])$', raw)
                         if not m: print("Formato non valido."); continue
                         idx = int(m.group(1)); tcode = m.group(2).lower()
@@ -887,7 +700,7 @@ def menu_modifica_tabella():
                     print("Colonne disponibili:")
                     for i, c in enumerate(current, 1):
                         print(f"  {i}) {c}")
-                    raw = ask('Inserisci "<num> i/r/t" (es: 2 t):\\n> ').strip()
+                    raw = ask('Inserisci "<num> i/r/t" (es: 2 t):\n> ').strip()
                     m = re.match(r'^(\d+)\s+([irtIRT])$', raw)
                     if not m: print("Formato non valido."); continue
                     idx = int(m.group(1)); tcode = m.group(2).lower()
@@ -900,7 +713,11 @@ def menu_modifica_tabella():
                         print(f"[TABELLA RICREATA] {table}")
                         print("==================================================")
                     except Exception as e:
-                        print(f"[ERRORE] Cambio tipo: {e}")
+                        print(f"[ERRORE] Cambio tipo su '{table}': {e}")
+                        try:
+                            print(_fk_violations_report(conn, table))
+                        except Exception:
+                            pass
 
             elif choice == "4":
                 if REOPEN_PER_ACTION:
@@ -909,7 +726,7 @@ def menu_modifica_tabella():
                         print("Colonne disponibili:")
                         for i, c in enumerate(current, 1):
                             print(f"  {i}) {c}")
-                        raw = ask('Numeri colonne (comma-separated) su cui fare toggle UNIQUE (es: 1, 3, 5):\\n> ').strip()
+                        raw = ask('Numeri colonne (comma-separated) su cui fare toggle UNIQUE (es: 1, 3, 5):\n> ').strip()
                         if not raw: continue
                         try:
                             idxs = [int(x.strip()) for x in raw.split(",") if x.strip()]
@@ -928,7 +745,7 @@ def menu_modifica_tabella():
                     print("Colonne disponibili:")
                     for i, c in enumerate(current, 1):
                         print(f"  {i}) {c}")
-                    raw = ask('Numeri colonne (comma-separated) su cui fare toggle UNIQUE (es: 1, 3, 5):\\n> ').strip()
+                    raw = ask('Numeri colonne (comma-separated) su cui fare toggle UNIQUE (es: 1, 3, 5):\n> ').strip()
                     if not raw: continue
                     try:
                         idxs = [int(x.strip()) for x in raw.split(",") if x.strip()]
@@ -945,7 +762,7 @@ def menu_modifica_tabella():
             elif choice == "5":
                 if REOPEN_PER_ACTION:
                     with connect_db() as conn:
-                        raw = ask('Colonne da convertire in FOREIGN KEY (comma-separated, es: author_id, place_id):\\n> ').strip()
+                        raw = ask('Colonne da convertire in FOREIGN KEY (comma-separated, es: author_id, place_id):\n> ').strip()
                         cols = [c.strip() for c in raw.split(",") if c.strip()]
                         if not cols: continue
                         try:
@@ -964,7 +781,7 @@ def menu_modifica_tabella():
                                 pass
                 else:
                     conn = persistent_conn
-                    raw = ask('Colonne da convertire in FOREIGN KEY (comma-separated, es: author_id, place_id):\\n> ').strip()
+                    raw = ask('Colonne da convertire in FOREIGN KEY (comma-separated, es: author_id, place_id):\n> ').strip()
                     cols = [c.strip() for c in raw.split(",") if c.strip()]
                     if not cols: continue
                     try:
@@ -976,7 +793,11 @@ def menu_modifica_tabella():
                         print(f"[TABELLA RICREATA] {table}")
                         print("==================================================")
                     except Exception as e:
-                        print(f"[ERRORE] Aggiunta FK: {e}")
+                        print(f"[ERRORE] Aggiunta FK su '{table}': {e}")
+                        try:
+                            print(_fk_violations_report(conn, table))
+                        except Exception:
+                            pass
 
             elif choice == "6":
                 if REOPEN_PER_ACTION:
@@ -985,7 +806,7 @@ def menu_modifica_tabella():
                         print("Ordine attuale:")
                         for i, c in enumerate(current, 1):
                             print(f"  {i}) {c}")
-                        raw = ask("Nuovo ordine (lista di numeri separati da virgola):\\n> ").strip()
+                        raw = ask("Nuovo ordine (lista di numeri separati da virgola):\n> ").strip()
                         try:
                             idxs = [int(x.strip()) for x in raw.split(",") if x.strip()]
                         except Exception:
@@ -1008,8 +829,9 @@ def menu_modifica_tabella():
                     conn = persistent_conn
                     current = [c for c in get_columns(conn, table) if c not in ("id","logseq")]
                     print("Ordine attuale:")
-                    for i, c in enumerate(current, 1): print(f"  {i}) {c}")
-                    raw = ask("Nuovo ordine (lista di numeri separati da virgola):\\n> ").strip()
+                    for i, c in enumerate(current, 1):
+                        print(f"  {i}) {c}")
+                    raw = ask("Nuovo ordine (lista di numeri separati da virgola):\n> ").strip()
                     try:
                         idxs = [int(x.strip()) for x in raw.split(",") if x.strip()]
                     except Exception:
@@ -1023,10 +845,14 @@ def menu_modifica_tabella():
                         print(f"[TABELLA RICREATA] {table}")
                         print("==================================================")
                     except Exception as e:
-                        print(f"[ERRORE] Riordino: {e}")
+                        print(f"[ERRORE] Riordino tabella '{table}': {e}")
+                        try:
+                            print(_fk_violations_report(conn, table))
+                        except Exception:
+                            pass
 
             elif choice == "0":
-                # torna al menu precedente (main), senza terminare lo script
+                # torna al menu precedente (main)
                 break
             else:
                 print("Scelta non valida.")
@@ -1038,12 +864,6 @@ def menu_modifica_tabella():
                 pass
 
 # --------------------------- Main ---------------------------
-
-def _init_mode_from_config():
-    global REOPEN_PER_ACTION
-    cfg = load_config()
-    if isinstance(cfg.get('reopen_per_action'), bool):
-        REOPEN_PER_ACTION = cfg['reopen_per_action']
 
 def main():
     global REOPEN_PER_ACTION
@@ -1078,7 +898,7 @@ def main():
             menu_modifica_tabella()
         elif choice == "3":
             REOPEN_PER_ACTION = not REOPEN_PER_ACTION
-            cfg = load_config(); cfg['reopen_per_action'] = REOPEN_PER_ACTION; save_config(cfg)
+            cfg = load_config(); cfg["reopen_per_action"] = REOPEN_PER_ACTION; save_config(cfg)
             print(f"[OK] Modalità connessione impostata a: {mode_label()} (salvata in {CONFIG_PATH.name})")
         elif choice == "0":
             print("Uscita.")
@@ -1100,12 +920,24 @@ if __name__ == "__main__":
         pause()
 
 
-    # Audit logging (best-effort)
+def read_autoincrement_seq(conn: sqlite3.Connection, table: str) -> int | None:
     try:
-        ensure_audit_schema_table(conn)
-        # Ricava indici unici attuali
-        idxs = conn.execute(f"PRAGMA index_list('{table}')").fetchall()
-        uni = [dict(name=r["name"], unique=r["unique"]) for r in idxs]
-        log_schema_change(conn, "TOGGLE_UNIQUE", table, {"cols": cols})
+        row = conn.execute('SELECT seq FROM sqlite_sequence WHERE name=?', (table,)).fetchone()
+        if row is None:
+            return None
+        return row[0] if isinstance(row, tuple) else row['seq']
     except Exception:
+        return None
+
+
+def restore_autoincrement_seq(conn: sqlite3.Connection, table: str, seq_value: int | None) -> None:
+    if seq_value is None:
+        return
+    try:
+        exists = conn.execute('SELECT 1 FROM sqlite_sequence WHERE name=?', (table,)).fetchone()
+        if exists:
+            conn.execute('UPDATE sqlite_sequence SET seq=? WHERE name=?', (seq_value, table))
+        else:
+            conn.execute('INSERT INTO sqlite_sequence(name, seq) VALUES(?, ?)', (table, seq_value))
+    except sqlite3.OperationalError:
         pass
