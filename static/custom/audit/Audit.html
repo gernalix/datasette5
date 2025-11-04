@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Audit – standalone</title>
+<style>
+  :root { --bg:#0f172a; --panel:#111827; --muted:#94a3b8; --text:#e5e7eb; --accent:#38bdf8; --ok:#22c55e; --warn:#f59e0b; --err:#ef4444; --badge:#1f2937; }
+  html,body{background:var(--bg);color:var(--text);font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Helvetica Neue,Arial;margin:0}
+  header{padding:16px 20px;border-bottom:1px solid #1f2937;position:sticky;top:0;background:linear-gradient(180deg,rgba(15,23,42,.98),rgba(15,23,42,.9));backdrop-filter:blur(4px);z-index:10}
+  h1{font-size:18px;margin:0 0 6px;letter-spacing:.3px}
+  .subtitle{color:var(--muted);font-size:12px}
+  .toolbar{display:grid;gap:8px;grid-template-columns:1fr auto;margin-top:12px}
+  .input{background:#0b1220;color:var(--text);border:1px solid #1f2937;padding:8px 10px;border-radius:8px;outline:none;width:100%}
+  .tabs{display:flex;gap:6px}
+  .tab-btn{background:#0b1220;border:1px solid #1f2937;color:var(--text);padding:8px 14px;border-radius:999px;cursor:pointer}
+  .tab-btn.active{background:var(--accent);color:#00111a;border-color:var(--accent)}
+  main{padding:16px 20px 40px}
+  section.panel{background:var(--panel);border:1px solid #1f2937;border-radius:14px;padding:14px;margin-bottom:16px}
+  .section-title{display:flex;align-items:center;justify-content:space-between;margin:4px 0 12px}
+  .section-title h2{margin:0;font-size:16px}
+  .count{color:var(--muted);font-size:12px}
+  .filters{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 10px}
+  .chip{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;border:1px solid #263247;background:#0b1220}
+  .chip input{margin:0}
+  table{width:100%;border-collapse:collapse}
+  th,td{text-align:left;padding:10px 8px;vertical-align:top;border-bottom:1px dashed #223049}
+  th{color:var(--muted);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.04em}
+  tr:hover{background:#0b1220}
+  code.inline{background:#0b1220;border:1px solid #1f2937;padding:2px 6px;border-radius:6px}
+  pre.block{margin:0;background:#0b1220;border:1px solid #1f2937;padding:10px;border-radius:10px;overflow:auto}
+  .pill{padding:2px 8px;border-radius:999px;border:1px solid #2b3a58;color:#cbd5e1}
+  .type-INSERT{background:rgba(34,197,94,.12);border-color:rgba(34,197,94,.35);color:#86efac}
+  .type-UPDATE{background:rgba(245,158,11,.12);border-color:rgba(245,158,11,.35);color:#fcd34d}
+  .type-DELETE{background:rgba(239,68,68,.12);border-color:rgba(239,68,68,.35);color:#fca5a5}
+  .diff-table{width:100%;border-collapse:separate;border-spacing:0 6px}
+  .diff-add{background:rgba(34,197,94,.08);border-left:3px solid var(--ok)}
+  .diff-del{background:rgba(239,68,68,.08);border-left:3px solid var(--err)}
+  .diff-chg{background:rgba(245,158,11,.08);border-left:3px solid var(--warn)}
+  .hidden{display:none!important}
+  details>summary{cursor:pointer;color:#cbd5e1}
+</style>
+</head>
+<body>
+<header>
+  <h1>Audit del database</h1>
+  <div class="subtitle">Standalone: nessun templating, nessuno script esterno modifica questa pagina.</div>
+  <div class="toolbar">
+    <input id="q" class="input" type="search" placeholder="Cerca (testo libero in tutte le colonne)..." />
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="ddl">Schema (DDL)</button>
+      <button class="tab-btn" data-tab="dml">Dati (DML)</button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <section id="panel-ddl" class="panel">
+    <div class="section-title">
+      <h2>Schema changes (DDL)</h2>
+      <div class="count"><span id="ddl-count">0</span> eventi</div>
+    </div>
+    <div class="filters">
+      <div id="ddl-action-filters" class="filters"></div>
+      <div id="ddl-objtype-filters" class="filters"></div>
+    </div>
+    <table id="ddl-table">
+      <thead>
+        <tr>
+          <th>ts</th>
+          <th>action</th>
+          <th>table_name</th>
+          <th>details</th>
+          <th>diff</th>
+        </tr>
+      </thead>
+      <tbody id="ddl-body"><tr><td colspan="5">Caricamento…</td></tr></tbody>
+    </table>
+  </section>
+
+  <section id="panel-dml" class="panel hidden">
+    <div class="section-title">
+      <h2>Data changes (DML)</h2>
+      <div class="count"><span id="dml-count">0</span> eventi</div>
+    </div>
+    <div class="filters" id="dml-action-filters"></div>
+    <table id="dml-table">
+      <thead>
+        <tr>
+          <th>ts</th>
+          <th>action</th>
+          <th>table_name</th>
+          <th>rowid</th>
+          <th>diff (per riga)</th>
+        </tr>
+      </thead>
+      <tbody id="dml-body"><tr><td colspan="5">Caricamento…</td></tr></tbody>
+    </table>
+  </section>
+</main>
+
+<script>
+const tabs=document.querySelectorAll('.tab-btn');
+const panels={ddl:document.getElementById('panel-ddl'),dml:document.getElementById('panel-dml')};
+tabs.forEach(b=>b.addEventListener('click',()=>{tabs.forEach(x=>x.classList.remove('active'));b.classList.add('active');Object.values(panels).forEach(p=>p.classList.add('hidden'));panels[b.dataset.tab].classList.remove('hidden');applyFilters();}));
+const q=document.getElementById('q');q.addEventListener('input',applyFilters);
+function textIncludes(el,needle){return el.innerText.toLowerCase().includes(needle);}
+async function fetchJSON(u){try{const r=await fetch(u);if(r.ok)return await r.json()}catch(e){}return null}
+async function firstOK(v){for(const u of v){const d=await fetchJSON(u);if(d)return d}return[]}
+const ddlUrls=['/output/audit_schema.json?_shape=array','/audit_schema.json?_shape=array','./audit_schema.json?_shape=array'];
+const dmlUrls=['/output/audit_dml.json?_shape=array','/audit_dml.json?_shape=array','./audit_dml.json?_shape=array'];
+function esc(x){return String(x==null?'':x).replace(/[&<>"']/g,s=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[s]))}
+function safeJSONparse(s){if(!s)return null;try{return JSON.parse(s)}catch(e){return null}}
+function renderKeyDiffRow(k,ov,nv){let cls='';if(ov===undefined&&nv!==undefined)cls='diff-add';else if(ov!==undefined&&nv===undefined)cls='diff-del';else if(JSON.stringify(ov)!==JSON.stringify(nv))cls='diff-chg';return `<tr class="${cls}"><td><code class="inline">${k}</code></td><td><code class="inline">${ov===undefined?'—':JSON.stringify(ov)}</code></td><td><code class="inline">${nv===undefined?'—':JSON.stringify(nv)}</code></td></tr>`}
+function buildJSONDiff(o,n){const keys=new Set([...(o?Object.keys(o):[]),...(n?Object.keys(n):[])]);return `<table class="diff-table"><thead><tr><th>campo</th><th>old</th><th>new</th></tr></thead><tbody>${[...keys].sort().map(k=>renderKeyDiffRow(k,o?o[k]:undefined,n?n[k]:undefined)).join('')}</tbody></table>`}
+let DDL_ACTIONS=new Set(),DDL_OBJTYPES=new Set(),DML_ACTIONS=new Set();const state={ddlActionAllowed:new Set(),ddlObjtypeAllowed:new Set(),dmlActionAllowed:new Set()};
+function renderActionChips(values,mount,setRef,prefix=''){mount.innerHTML=[...values].sort().map(v=>{const id=`${prefix}__${v}`;return `<label class="chip"><input type="checkbox" id="${id}" data-value="${v}" checked/> ${v}</label>`}).join('');[...mount.querySelectorAll('input[type="checkbox"]')].forEach(cb=>{setRef.add(cb.dataset.value);cb.addEventListener('change',()=>{if(cb.checked)setRef.add(cb.dataset.value);else setRef.delete(cb.dataset.value);applyFilters();});});}
+function applyFilters(){const needle=(q.value||'').toLowerCase();document.querySelectorAll('#ddl-body tr[data-row]').forEach(tr=>{const txtOk=needle===''||textIncludes(tr,needle);const action=tr.getAttribute('data-action')||'';const objtype=tr.getAttribute('data-objtype')||'';const byAction=state.ddlActionAllowed.size===0||state.ddlActionAllowed.has(action);const byObj=state.ddlObjtypeAllowed.size===0||state.ddlObjtypeAllowed.has(objtype);tr.style.display=(txtOk&&byAction&&byObj)?'':'none';});document.getElementById('ddl-count').textContent=[...document.querySelectorAll('#ddl-body tr[data-row]')].filter(tr=>tr.style.display!=='none').length;document.querySelectorAll('#dml-body tr[data-row]').forEach(tr=>{const txtOk=needle===''||textIncludes(tr,needle);const action=tr.getAttribute('data-action')||'';const byAction=state.dmlActionAllowed.size===0||state.dmlActionAllowed.has(action);tr.style.display=(txtOk&&byAction)?'':'none';});document.getElementById('dml-count').textContent=[...document.querySelectorAll('#dml-body tr[data-row]')].filter(tr=>tr.style.display!=='none').length;}
+function renderDDL(rows){const tbody=document.getElementById('ddl-body');if(!rows||rows.length===0){tbody.innerHTML='<tr><td colspan="5">Nessun evento</td></tr>';return}DDL_ACTIONS=new Set();DDL_OBJTYPES=new Set();tbody.innerHTML=rows.map(r=>{const ts=r.ts;const action=(r.action||'').toUpperCase();const table_name=r.table_name;const details_raw=r.details;const details=safeJSONparse(details_raw)||{};const objType=(details.object_type||details.obj||details.type||'').toString().toUpperCase();const sql_text=details.sql_text||details.sql||'';const object_name=details.object_name||details.name||'';DDL_ACTIONS.add(action);if(objType)DDL_OBJTYPES.add(objType);let diffBlock='—';const dj=details.diff_json||details.diff||null;const parsed=typeof dj==='string'?safeJSONparse(dj):dj;if(parsed&&(parsed.before!==undefined||parsed.after!==undefined)){diffBlock=`<details><summary>Mostra diff</summary>${buildJSONDiff(parsed.before||null,parsed.after||null)}</details>`}else if(dj){const raw=typeof dj==='string'?dj:JSON.stringify(dj,null,2);diffBlock=`<details><summary>Mostra diff (raw)</summary><pre class="block">${raw}</pre></details>`}
+const detBlock=`<details><summary>Dettagli (${objType||'obj?'} ${object_name||''})</summary>${sql_text?`<pre class="block">${sql_text}</pre>`:''}${object_name?`<div style="margin-top:6px">object_name: <code class="inline">${object_name}</code></div>`:''}${objType?`<div style="margin-top:6px">object_type: <code class="inline">${objType}</code></div>`:''}<details style="margin-top:6px"><summary>JSON completo</summary><pre class="block">${typeof details_raw==='string'?details_raw:JSON.stringify(details,null,2)}</pre></details></details>`;return `<tr data-row data-action="${action}" data-objtype="${objType}"><td><code class="inline">${ts}</code></td><td><span class="pill">${action}</span></td><td><code class="inline">${table_name}</code></td><td>${detBlock}</td><td>${diffBlock}</td></tr>`}).join('');document.getElementById('ddl-count').textContent=rows.length;state.ddlActionAllowed=new Set();state.ddlObjtypeAllowed=new Set();renderActionChips(DDL_ACTIONS,document.getElementById('ddl-action-filters'),state.ddlActionAllowed,'ddlAct');renderActionChips(DDL_OBJTYPES,document.getElementById('ddl-objtype-filters'),state.ddlObjtypeAllowed,'ddlObj');applyFilters();}
+function renderDML(rows){const tbody=document.getElementById('dml-body');if(!rows||rows.length===0){tbody.innerHTML='<tr><td colspan="5">Nessun evento</td></tr>';return}DML_ACTIONS=new Set();tbody.innerHTML=rows.map(r=>{const ts=r.ts;const action=(r.action||'').toUpperCase();const table_name=r.table_name;const rowid=r.rowid;const old_values=safeJSONparse(r.old_values);const new_values=safeJSONparse(r.new_values);DML_ACTIONS.add(action);let diffUI='—';if(action==='INSERT'){diffUI=`<details open><summary>Valori inseriti</summary>${buildJSONDiff(null,new_values||{})}</details>`}else if(action==='DELETE'){diffUI=`<details open><summary>Valori eliminati</summary>${buildJSONDiff(old_values||{},null)}</details>`}else if(action==='UPDATE'){diffUI=`<details open><summary>Valori cambiati</summary>${buildJSONDiff(old_values||{},new_values||{})}</details>`}
+return `<tr data-row data-action="${action}"><td><code class="inline">${ts}</code></td><td><span class="pill type-${action}">${action}</span></td><td><code class="inline">${table_name}</code></td><td><code class="inline">${rowid}</code></td><td>${diffUI}</td></tr>`}).join('');document.getElementById('dml-count').textContent=rows.length;state.dmlActionAllowed=new Set();renderActionChips(DML_ACTIONS,document.getElementById('dml-action-filters'),state.dmlActionAllowed,'dmlAct');applyFilters();}
+async function init(){const ddl=await firstOK(ddlUrls)||[];renderDDL(ddl);const dml=await firstOK(dmlUrls)||[];renderDML(dml);}init();
+</script>
+</body>
+</html>
