@@ -1,88 +1,73 @@
 @echo off
 setlocal EnableExtensions EnableDelayedExpansion
 
-REM ==========================================================
-REM  Auto Calendar + Datasette (HTTPS via Python) - SAFE
-REM  - Usa SEMPRE .venv313
-REM  - Passa CERT_PEM/KEY_PEM allo script Python
-REM  - NESSUN uso di ELSE per evitare "... was unexpected ..."
-REM ==========================================================
+REM ================================================
+REM  Auto Calendar + Datasette HTTPS via Python SAFE
+REM  - Niente --build-only (lo script non lo supporta)
+REM  - Avvio UNICO: solo scripts\auto_calendar.py
+REM  - Passo --ssl-key / --ssl-crt allo script
+REM  - Usa .venv313
+REM ================================================
 
 set "ROOT=%~dp0"
 pushd "%ROOT%"
 
-echo ==========================================================
-echo Avvio Auto Calendar + Datasette (HTTPS via Python - SAFE)
-echo Cartella: %ROOT%
-echo Porta preferita: 8001
-echo ==========================================================
+echo ================================================
+echo Avvio Auto Calendar + Datasette HTTPS via Python SAFE
+echo Cartella %ROOT%
+echo Porta 8001
+echo ================================================
 
-REM --- Python del venv fisso .venv313 ---
+REM Python del venv fisso
 set "PY_VENV=%ROOT%\.venv313\Scripts\python.exe"
-if not exist "%PY_VENV%" (
-  echo ERRORE: venv non trovato: "%PY_VENV%"
-  goto :error
-)
+if exist "%PY_VENV%" goto :venv_ok
+echo ERRORE venv non trovato %PY_VENV%
+goto :error
 
-REM --- Certificati fissi (PEM combinato + KEY) ---
-set "CERT_PEM=C:\Users\seste\daniele.tail6b4058.ts.net.pem"
-set "KEY_PEM=C:\Users\seste\daniele.tail6b4058.ts.net.key"
+:venv_ok
+REM Certificati fissi (usa PEM combinato per compatibilita')
+set "SSL_KEY=C:\Users\seste\daniele.tail6b4058.ts.net.key"
+set "SSL_CRT=C:\Users\seste\daniele.tail6b4058.ts.net.pem"
 
-if not exist "%CERT_PEM%" (
-  echo ERRORE: Certificato PEM combinato non trovato: "%CERT_PEM%"
-  echo Crea il PEM con:
-  echo   type "C:\Users\seste\daniele.tail6b4058.ts.net.crt" ^> "C:\Users\seste\daniele.tail6b4058.ts.net.pem"
-  echo   type "C:\Users\seste\daniele.tail6b4058.ts.net.key" ^>^> "C:\Users\seste\daniele.tail6b4058.ts.net.pem"
-  goto :error
-)
+if exist "%SSL_KEY%" goto :key_ok
+echo ERRORE chiave non trovata %SSL_KEY%
+goto :error
 
-if not exist "%KEY_PEM%" (
-  echo ERRORE: Chiave non trovata: "%KEY_PEM%"
-  goto :error
-)
+:key_ok
+if exist "%SSL_CRT%" goto :crt_ok
+echo ERRORE certificato PEM combinato non trovato %SSL_CRT%
+echo Crea il PEM con:
+echo   type "C:\Users\seste\daniele.tail6b4058.ts.net.crt" ^> "C:\Users\seste\daniele.tail6b4058.ts.net.pem"
+echo   type "C:\Users\seste\daniele.tail6b4058.ts.net.key" ^>^> "C:\Users\seste\daniele.tail6b4058.ts.net.pem"
+goto :error
 
-REM --- Altre variabili utili (se lo script le legge dall'ambiente) ---
-set "PORT=8001"
+:crt_ok
+REM Parametri passati allo script (usa il suo argparse)
 set "HOST=0.0.0.0"
-set "BASE_URL=/"
-set "DB=output.db"
-set "TEMPLATES=templates"
-set "PLUGINS=plugins"
-set "METADATA=metadata.json"
-set "STATIC_CUSTOM=custom:static/custom"
+set "PORT=8001"
+set "BASEPATH=/"
 
-REM --- Avvio unico: lo script Python gestisce watchdog + Datasette (HTTPS) ---
-if exist "scripts\auto_calendar.py" (
-  echo ----------------------------------------------------------
-  echo Avvio: scripts\auto_calendar.py con HTTPS (CERT_PEM/KEY_PEM)
-  "%PY_VENV%" "scripts\auto_calendar.py"
-  set "EXITCODE=%ERRORLEVEL%"
-  if not "%EXITCODE%"=="0" (
-    echo ----------------------------------------------------------
-    echo ERRORE: auto_calendar.py terminato con codice %EXITCODE%.
-    goto :error
-  )
-)
+if exist "scripts\auto_calendar.py" goto :run_script
+echo ERRORE scripts\auto_calendar.py non trovato
+goto :error
 
-if not exist "scripts\auto_calendar.py" (
-  echo ERRORE: scripts\auto_calendar.py non trovato. Non posso avviare la dashboard.
-  goto :error
-)
-
-echo.
-echo [FINE] Script terminato.
-goto :end
+:run_script
+echo Avvio scripts\auto_calendar.py con HTTPS
+"%PY_VENV%" "scripts\auto_calendar.py" --host "%HOST%" --port "%PORT%" --base-path "%BASEPATH%" --ssl-key "%SSL_KEY%" --ssl-crt "%SSL_CRT%"
+if "%ERRORLEVEL%"=="0" goto :end
+echo ERRORE auto_calendar.py terminato con codice %ERRORLEVEL%
+goto :error
 
 :error
 echo.
-echo (Premi un tasto per chiudere.)
+echo Premi un tasto per chiudere
 pause >nul
 popd
 exit /b 1
 
 :end
 echo.
-echo (Premi un tasto per chiudere.)
+echo Terminato. Premi un tasto per chiudere
 pause >nul
 popd
 exit /b 0

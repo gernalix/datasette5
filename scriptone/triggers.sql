@@ -52,13 +52,3 @@ BEGIN
   );
 END;
 
--- === SET LOGSEQ RANDOM ================================
-CREATE TRIGGER {trigger_name_logseq}
-AFTER INSERT ON "{table}"
-FOR EACH ROW
-WHEN NEW."{logseq_col}" IS NULL
-BEGIN
-  UPDATE "{table}"
-  SET "{logseq_col}" = hex(randomblob(5))
-  WHERE rowid = NEW.rowid;
-END;
