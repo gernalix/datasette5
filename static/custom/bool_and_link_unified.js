@@ -1,36 +1,52 @@
 (function(){
-  async function loadMap(url){
-    try{
-      const r = await fetch(url, {cache:"no-store"});
-      if(!r.ok) return {};
-      const txt = await r.text();
-      const map = {};
-      const lines = txt.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
-      for(const line of lines){
-        if(line.startsWith("#")) continue;
-        if(line.includes(":")){
-          const [t, rest] = line.split(":");
-          const cols = (rest||"").split(",").map(s=>s.trim()).filter(Boolean);
-          for(const c of cols){ (map[t.trim()] ||= new Set()).add(c); }
-        } else if(line.includes(".")){
-          const [t, c] = line.split(".");
-          if(t && c) (map[t.trim()] ||= new Set()).add(c.trim());
-        }
+  // ===== Robust loader for /-/static/custom/*.txt with fallbacks =====
+  async function fetchTextMulti(paths){
+    for(const p of paths){
+      try{
+        const r = await fetch(p, {cache:"no-store"});
+        if(r.ok) return await r.text();
+      }catch(e){}
+    }
+    return null;
+  }
+  function customPaths(rel){
+    const clean = rel.replace(/^\/+/, "");
+    const candidates = [
+      "/" + clean,
+      "/-/static/" + clean,
+      "/-/static/custom/" + clean.replace(/^custom\//,""),
+      "/static/" + clean,
+      "/static/custom/" + clean.replace(/^custom\//,""),
+    ];
+    return [...new Set(candidates)];
+  }
+  async function loadMap(relUrl){
+    const txt = await fetchTextMulti(customPaths(relUrl));
+    if(!txt) return {};
+    const map = {};
+    const lines = txt.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+    for(const line of lines){
+      if(line.startsWith("#")) continue;
+      if(line.includes(":")){
+        const [t, rest] = line.split(":");
+        const cols = (rest||"").split(",").map(s=>s.trim()).filter(Boolean);
+        for(const c of cols){ (map[t.trim().toLowerCase()] ||= new Set()).add(c.trim().toLowerCase()); }
+      } else if(line.includes(".")){
+        const [t, c] = line.split(".");
+        if(t && c) (map[t.trim().toLowerCase()] ||= new Set()).add(c.trim().toLowerCase());
       }
-      return map;
-    }catch(e){ console.warn("loadMap fail",url,e); return {}; }
+    }
+    return map;
   }
 
   function currentTable(){
     const parts = location.pathname.split("/").filter(Boolean);
-    if(parts.length>=2 && parts[0]==="output") return decodeURIComponent(parts[1]);
-    return parts.length ? decodeURIComponent(parts[parts.length-1]) : null;
+    // typical: /<db>/<table>
+    return parts.length ? decodeURIComponent(parts[parts.length-1]).toLowerCase() : null;
   }
-
   function findMainTable(){
     return document.querySelector(".rows-and-columns table, #rows-and-columns table, main table, .content table, table");
   }
-
   function headerMap(tableEl){
     const m=new Map();
     tableEl.querySelectorAll("thead th, thead td").forEach((th,i)=>{
@@ -39,12 +55,20 @@
     });
     return m;
   }
-
+  function extractUrlFromTd(td){
+    const a = td.querySelector("a[href]");
+    if(a) return a.getAttribute("href");
+    const raw=(td.getAttribute("data-value")||td.getAttribute("data-raw")||td.textContent||"").trim();
+    let m = raw.match(/https?:\/\/[^\s"')<>]+/i);
+    if(m) return m[0];
+    m = raw.match(/\bwww\.[^\s"')<>]+/i);
+    if(m) return "https://" + m[0];
+    return null;
+  }
   function makeEmojiLink(href){
     const a=document.createElement("a");
     a.href=href;
     a.textContent="➡️";
-    a.title=href;
     a.setAttribute("data-unified","1");
     a.setAttribute("data-emoji-link","1");
     if(/^(https?:|mailto:|tel:|ftp:|magnet:)/i.test(href)){
@@ -68,17 +92,12 @@
         if(!td || td.dataset.unified==="1") continue;
 
         // LINK columns
-        if(LINKS[tname] && LINKS[tname].has(colName)){
-          const a=td.querySelector("a[href]");
-          if(a){
-            const href=a.getAttribute("href");
-            td.innerHTML="";
-            td.appendChild(makeEmojiLink(href));
-            td.dataset.unified="1";
-          }else{
-            td.innerHTML="";
-            td.dataset.unified="1";
-          }
+        const colNameLower=(colName||"").toLowerCase();
+        if(LINKS[tname] && LINKS[tname].has(colNameLower)){
+          const href = extractUrlFromTd(td);
+          td.innerHTML="";
+          if(href) td.appendChild(makeEmojiLink(href));
+          td.dataset.unified="1";
           continue;
         }
 
@@ -95,8 +114,8 @@
 
   async function run(){
     const [LINKS, NOTBOOL] = await Promise.all([
-      loadMap("/custom/link_columns.txt"),
-      loadMap("/custom/not_booleans.txt")
+      loadMap("custom/link_columns.txt"),
+      loadMap("custom/not_booleans.txt")
     ]);
     const apply=()=>applyOnce(LINKS,NOTBOOL);
     apply();
@@ -105,7 +124,6 @@
     mo.observe(target,{childList:true,subtree:true});
     setInterval(apply,1200);
   }
-
   if(document.readyState==="loading") document.addEventListener("DOMContentLoaded",run);
   else run();
 })();

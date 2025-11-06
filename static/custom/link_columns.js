@@ -1,78 +1,78 @@
-
-/* AUTO: link_columns.js v2 — force external links for configured columns, with MutationObserver */
+/* link_columns.js (robust) — turn configured link columns into an "➡️" emoji link */
 (() => {
-  function currentTable() {
-    try {
-      const seg = location.pathname.split("/").filter(Boolean);
-      const i = seg.indexOf("output");
-      if (i >= 0 && i + 1 < seg.length) return decodeURIComponent(seg[i+1]);
-      return seg[seg.length-1] || "";
-    } catch { return ""; }
+  async function fetchTextMulti(paths){
+    for(const p of paths){
+      try{
+        const r = await fetch(p, {cache:"no-store"});
+        if(r.ok) return await r.text();
+      }catch(e){}
+    }
+    return null;
   }
-
+  function customPaths(rel){
+    const clean = rel.replace(/^\/+/, "");
+    const candidates = [
+      "/" + clean,
+      "/-/static/" + clean,
+      "/-/static/custom/" + clean.replace(/^custom\//,""),
+      "/static/" + clean,
+      "/static/custom/" + clean.replace(/^custom\//,""),
+    ];
+    return [...new Set(candidates)];
+  }
   async function loadLinkSpec() {
     try {
-      const res = await fetch("/custom/link_columns.txt", { cache: "no-store" });
-      if (!res.ok) return new Set();
-      const txt = await res.text();
+      const txt = await fetchTextMulti(customPaths("custom/link_columns.txt"));
+      if (!txt) return new Set();
       const set = new Set();
       txt.split(/\r?\n/).forEach(line => {
-        const s = line.trim();
-        if (!s || s.startsWith("#")) return;
-        if (s.includes(".")) { set.add(s.toLowerCase()); return; }
-        if (s.includes(":")) {
-          const parts = s.split(":");
-          const tbl = (parts[0]||"").trim().toLowerCase();
-          const cols = (parts[1]||"").split(",");
-          cols.forEach(c=>{ const col=(c||"").trim().toLowerCase(); if (tbl && col) set.add(`${tbl}.${col}`); });
-          return;
+        line = line.trim();
+        if (!line || line.startsWith("#")) return;
+        if (line.includes(":")) {
+          const [t, rest] = line.split(":");
+          rest.split(",").forEach(c => {
+            c = c.trim();
+            if (t && c) set.add(t.trim().toLowerCase() + "." + c.trim().toLowerCase());
+          });
+        } else if (line.includes(".")) {
+          set.add(line.trim().toLowerCase());
         }
       });
       return set;
-    } catch {
+    } catch (e) {
+      console.warn("loadLinkSpec failed", e);
       return new Set();
     }
   }
-
-  function getHeaders(tableEl) {
-    const heads = [];
-    tableEl.querySelectorAll("thead tr th").forEach(th => {
-      const name = th.getAttribute("data-column") || th.textContent;
-      heads.push((name || "").trim());
-    });
-    return heads;
+  function tableAndHeaders(table) {
+    const ths = Array.from(table.querySelectorAll("thead th, thead td"));
+    return ths.map(th => (th.getAttribute("data-column") || th.textContent || "").trim());
   }
-
-  function inferColumnNameByIndex(headers, td) {
-    const tr = td.closest("tr");
+  function findTdMeta(td) {
+    const tr = td.parentElement;
     if (!tr) return null;
+    const table = tr.closest("table");
+    if (!table) return null;
+    const headers = tableAndHeaders(table);
     const tds = Array.from(tr.children);
     const idx = tds.indexOf(td);
     if (idx < 0 || idx >= headers.length) return null;
     return headers[idx] || null;
   }
-
-  function isExternal(href) {
-    return /^https?:\/\//i.test(href || "");
-  }
-
+  function isExternal(href) { return /^https?:\/\//i.test(href || ""); }
   function extractExternalUrl(td) {
-    // 1) Look for existing external anchors
     const anchors = td.querySelectorAll("a[href]");
     for (const a of anchors) {
       const href = (a.getAttribute("href") || "").trim();
       if (isExternal(href)) return href;
     }
-    // 2) Try from data-value / data-raw / text
     const raw = td.getAttribute("data-value") || td.getAttribute("data-raw") || td.textContent || "";
-    // Prefer explicit URLs
     const m = raw.match(/https?:\/\/[^\s"')<>]+/i);
     if (m) return m[0];
     const m2 = raw.match(/\bwww\.[^\s"')<>]+/i);
     if (m2) return "https://" + m2[0];
     return null;
   }
-
   function renderArrow(td, url) {
     if (!url) return;
     td.innerHTML = "";
@@ -84,53 +84,38 @@
     a.title = url;
     td.appendChild(a);
     td.dataset.linkColumnsApplied = "1";
-    td.setAttribute("data-no-filter","1");
-    a.addEventListener("click",     ev => ev.stopPropagation(), true);
-    a.addEventListener("touchend",  ev => ev.stopPropagation(), true);
-    a.addEventListener("pointerup", ev => ev.stopPropagation(), true);
   }
-
   function applyOnce(tableEl, spec) {
-    const headers = getHeaders(tableEl);
-    const tname = currentTable().toLowerCase();
-    tableEl.querySelectorAll("tbody tr td").forEach(td => {
-      const col = inferColumnNameByIndex(headers, td);
-      if (!col) return;
-      const key = `${tname}.${col}`.toLowerCase();
-      if (!spec.has(key)) return;
-
-      // If we've already applied, skip
+    const ths = Array.from(tableEl.querySelectorAll("thead th, thead td"));
+    const bodyTds = Array.from(tableEl.querySelectorAll("tbody td"));
+    bodyTds.forEach(td => {
       if (td.dataset.linkColumnsApplied === "1") return;
-
+      const colName = findTdMeta(td);
+      if (!colName) return;
+      const tr = td.parentElement;
+      if (!tr) return;
+      const table = tr.closest("table");
+      if (!table) return;
+      const pathParts = location.pathname.split("/").filter(Boolean);
+      const tname = pathParts.length ? decodeURIComponent(pathParts[pathParts.length-1]).toLowerCase() : "";
+      if (!tname) return;
+      // allowed spec key format is "table.col"
+      const key = `${tname}.${colName}`.toLowerCase(); if (!spec.has(key)) return;
       const external = extractExternalUrl(td);
-      if (external) {
-        renderArrow(td, external);
-      } else {
-        // If there's an internal link currently, we still want to try to remove it only if we can find an external URL.
-        // If no external URL can be found, we leave it untouched (user asked to avoid internal fallback).
-      }
+      if (external) renderArrow(td, external);
     });
   }
-
   function observeAndEnforce(tableEl, spec) {
-    const obs = new MutationObserver(() => {
-      applyOnce(tableEl, spec);
-    });
+    const obs = new MutationObserver(() => { applyOnce(tableEl, spec); });
     obs.observe(tableEl, { childList: true, subtree: true, characterData: true, attributes: true });
-    // Initial apply
     applyOnce(tableEl, spec);
   }
-
   async function run() {
     const table = document.querySelector("table.rows-and-columns, table");
     if (!table) return;
     const spec = await loadLinkSpec();
     observeAndEnforce(table, spec);
   }
-
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", run);
-  } else {
-    run();
-  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", run);
+  else run();
 })();
