@@ -1,0 +1,21 @@
+# Esempio minimale valido (puoi rinominare chiavi tra: imports / tabelle / tables / batch)
+imports:
+  - table: umore
+    time_column: tempo
+    id_mode: surrogate   # oppure "strict" se pretendi che ogni entry abbia un id esplicito
+    entries:
+      - ext_id: "m-001"
+        tempo: "2025-01-01T12:00:00"
+        umore: 7
+        note: "prova A"
+        createdTime: "2025-01-01T12:00:00"
+        modifiedTime: "2025-01-01T12:00:00"
+      - memento_id: "old-xyz"  # verrà migrato su ext_id
+        tempo: "2025-01-02T09:10:00"
+        umore: 5
+        note: "prova B"
+  - table: ansia
+    
+    id_mode: surrogate   # oppure "strict" se pretendi che ogni entry abbia un id esplicito
+    entries:
+     
