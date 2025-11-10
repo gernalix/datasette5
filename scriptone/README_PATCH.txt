@@ -1,22 +1,15 @@
-README PATCH — MEMENTO SDK
-==========================
+PATCH: Fix pagination in memento_sdk.fetch_all_entries_full
 
-- Aggiunto percorso di default del database:
-  Z:\download\datasette5\scriptone\noutput.db
+- Handles multiple pagination schemes: 'next', 'next_url', links.next, nextPageToken/pageToken, cursor/continuation, offset+total, page+pages.
+- Ensures token is preserved on next requests (adds it to next URL if missing).
+- Keeps limit parameter; you can bump it in memento_import.ini via 'limit = 500' if server allows.
 
-- Inclusa versione completa di memento_sdk.py con:
-  * Config robusta (config.py -> CONFIG/CFG; poi settings.ini/yaml; poi env MEMENTO_*)
-  * Sanificazione api_url e forzatura /v1
-  * Token in querystring (?token=...)
-  * list_libraries() normalizzata
-  * infer_field_mapping() su /libraries/{id}
-  * get_one_raw_entry() con fallback a /entries + dettaglio /entries/{id}
-  * fetch_all_entries_full() con paginazione e retry 429
+Symptom addressed:
+- Import showed: [ok] umore (cloud): 0/50 righe importate despite 87 remaining. Cause: only first page (~50) fetched; all were already present so INSERT OR IGNORE added 0 rows.
 
-Uso rapido
-----------
-from memento_sdk import (
-    DEFAULT_DB_PATH, get_default_db_path,
-    list_libraries, infer_field_mapping, get_one_raw_entry, fetch_all_entries_full
-)
-print(get_default_db_path())
+How to apply:
+- Replace your existing scriptone\memento_sdk.py with this one.
+- Re-run: menu -> 5) Importa batch da YAML/INI.
+
+Expected result:
+- It should fetch all pages and insert remaining 87 rows.

@@ -316,11 +316,80 @@ def get_one_raw_entry(library_id, form_name="default"):
 # UTILITÀ PER IMPORT COMPLETI
 # =========================================================
 
+
 def fetch_all_entries_full(library_id, limit=100):
-    """Scarica tutte le entries; se la lista non contiene i campi, fa fetch dei dettagli."""
-    base = _base_url()
+    """Scarica TUTTE le entries di una libreria, seguendo diversi schemi di paginazione.
+    - Supporta risposte con chiavi: "entries", "items", "data", o la risposta già lista.
+    - Supporta paginazione via: "next", "next_url", {"links":{"next":...}}, "nextPageToken"/"next_page_token",
+      "cursor"/"continuation"/"continuationToken", oppure "offset"+"total" / "page"+"pages".
+    - Se la lista non contiene i campi completi, fa fetch del dettaglio /entries/{id}.
+    """
+    import urllib.parse as _up
+
+    base = _base_url().rstrip("/")
     url = f"{base}/libraries/{library_id}/entries"
-    params = _token_params(); params["limit"] = int(limit)
+    params = _token_params().copy()
+    params["limit"] = int(limit)
+
+    def _listify(data):
+        items = (data.get("entries") if isinstance(data, dict) else None)              or (data.get("items") if isinstance(data, dict) else None)              or (data.get("data") if isinstance(data, dict) else None)              or data
+        if isinstance(items, dict):
+            # a volte i dati sono in items["results"]
+            items = items.get("results") or items.get("entries") or items.get("items") or []
+        return items if isinstance(items, list) else []
+
+    def _next_info(data):
+        # 1) URL diretto
+        next_url = None
+        if isinstance(data, dict):
+            next_url = data.get("next") or data.get("next_url")
+            if not next_url:
+                links = data.get("links") or {}
+                if isinstance(links, dict):
+                    next_url = links.get("next")
+        if next_url:
+            # Se è relativo, renderlo assoluto
+            next_url = _up.urljoin(base + "/", next_url)
+            # Assicura che abbia sempre il token
+            parsed = _up.urlparse(next_url)
+            q = dict(_up.parse_qsl(parsed.query))
+            if "token" not in q:
+                q.update(_token_params())
+            return _up.urlunparse(parsed._replace(query=_up.urlencode(q))), None
+
+        # 2) Token di pagina
+        token = None
+        if isinstance(data, dict):
+            token = data.get("nextPageToken") or data.get("next_page_token") or                     data.get("pageToken") or data.get("paginationToken") or                     data.get("cursor") or data.get("continuation") or data.get("continuationToken")
+        if token:
+            nxt_params = _token_params().copy()
+            nxt_params["limit"] = int(limit)
+            # I nomi più comuni per il parametro sono "pageToken" o "cursor"
+            nxt_params["pageToken"] = token
+            return url, nxt_params
+
+        # 3) Offset/total oppure page/pages
+        if isinstance(data, dict):
+            total = data.get("total") or data.get("count") or None
+            offset = data.get("offset")
+            page = data.get("page"); pages = data.get("pages")
+            if total is not None and offset is not None:
+                nxt_params = _token_params().copy()
+                nxt_params["limit"] = int(limit)
+                nxt_params["offset"] = int(offset) + int(limit)
+                if nxt_params["offset"] >= int(total):
+                    return None, None
+                return url, nxt_params
+            if page is not None and pages is not None:
+                page = int(page); pages = int(pages)
+                if page + 1 >= pages:
+                    return None, None
+                nxt_params = _token_params().copy()
+                nxt_params["limit"] = int(limit)
+                nxt_params["page"] = page + 1
+                return url, nxt_params
+
+        return None, None
 
     all_rows = []
     while True:
@@ -329,19 +398,15 @@ def fetch_all_entries_full(library_id, limit=100):
             time.sleep(1.2); r = _get_with_backoff(url, params=params, timeout=_timeout())
         _raise_on_404(r, f"/libraries/{library_id}/entries")
         data = r.json()
-        items = data.get("entries") or data.get("items") or data
-        if isinstance(items, dict):
-            items = list(items.values())
-        if not items:
-            break
 
-        # se mancano i campi, prova il dettaglio (solo quando serve)
+        items = _listify(data)
+        # fetch dettagli solo se servono
         rows = []
         for it in items:
-            if it.get("fields"):
+            if isinstance(it, dict) and it.get("fields"):
                 rows.append(it)
             else:
-                eid = it.get("id")
+                eid = it.get("id") if isinstance(it, dict) else None
                 if not eid:
                     rows.append(it); continue
                 durl = f"{base}/libraries/{library_id}/entries/{eid}"
@@ -353,10 +418,9 @@ def fetch_all_entries_full(library_id, limit=100):
 
         all_rows.extend(rows)
 
-        # next page?
-        next_url = data.get("next") or data.get("next_url")
+        next_url, next_params = _next_info(data)
         if next_url:
-            url, params = next_url, {}  # next_url include già la query
+            url, params = next_url, (next_params or {})
         else:
             break
 
