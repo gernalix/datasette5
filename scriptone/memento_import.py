@@ -1,20 +1,13 @@
 
 # memento_import.py
-# Importer with "enrich only NEW or MODIFIED rows" logic + proper incremental checkpoint.
+# Importer with:
+# - "enrich only NEW or MODIFIED rows" logic
+# - proper incremental checkpoint (max remote timestamp)
+# - SKIP NON-ACTIVE entries at import time (status != "active")
+# - AUTO-RUN field expansion (memento_field_expander.expand_fields) after each section import
 #
 # Public entry:
 #   memento_import_batch(db_path: str, batch_path: str) -> int
-#
-# Key features:
-# - Reads INI/YAML batch with one section per Memento library.
-# - sync = full | incremental (uses memento_sync.last_modified_remote as updatedAfter).
-# - Fetches list pages via memento_sdk.fetch_all_entries_full / fetch_incremental.
-# - Enrichment (per-entry detail) is limited to ONLY:
-#     * rows NOT present locally (NEW), or
-#     * rows present but with remote modifiedTime newer than local (MODIFIED).
-# - Skips enrichment entirely when the LIST already contains fields (include=fields).
-# - Updates checkpoint to max remote timestamp from fetched rows.
-# - Safe inserts with INSERT OR IGNORE; minimal required schema is ensured on the fly.
 #
 # INI options per section:
 #   library_id      = <required>
@@ -23,12 +16,12 @@
 #   sync            = incremental | full
 #   limit           = 100
 #   enrich_details  = 0 | auto | 1     (default: 1)
-#   enrich_only_new = 1 | 0            (default: 1)  # still respected; with this file we also consider "modified"
+#   enrich_only_new = 1 | 0            (default: 1)  # kept for clarity; we also detect modified
 #   enrich_workers  = 8
 #   enrich_probe    = 20
 #   enrich_max      = 0  (0 = no cap)
 #
-# This file expects memento_sdk.py to provide:
+# Requires memento_sdk.py to expose:
 #   fetch_all_entries_full(library_id, limit, progress=None)
 #   fetch_incremental(library_id, modified_after_iso, limit, progress=None)
 #   fetch_entry_detail(library_id, entry_id)
@@ -40,7 +33,7 @@ import time
 import sqlite3
 import configparser
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence, Set, Tuple
+from typing import Any, Dict, List, Optional, Sequence, Tuple
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # --- SDK imports (should be the patched one with include=fields) ---
@@ -126,10 +119,20 @@ def _tempo_from_row(e: Dict[str, Any], tempo_col: str) -> Optional[str]:
             return str(v)
     return None
 
-def _insert_rows(conn: sqlite3.Connection, table: str, tempo_col: str, rows: Sequence[Dict[str, Any]]) -> Tuple[int, int, int]:
-    ins, missing, dup = 0, 0, 0
+def _status_of(e: Dict[str, Any]) -> Optional[str]:
+    return (e.get("status") or (e.get("raw") or {}).get("status"))
+
+def _is_active(e: Dict[str, Any]) -> bool:
+    s = _status_of(e)
+    return (s or "active").lower() == "active"
+
+def _insert_rows(conn: sqlite3.Connection, table: str, tempo_col: str, rows: Sequence[Dict[str, Any]]) -> Tuple[int, int, int, int]:
+    ins, missing, dup, skipped_non_active = 0, 0, 0, 0
     cur = conn.cursor()
     for e in rows:
+        if not _is_active(e):
+            skipped_non_active += 1
+            continue
         ext = _ext_id_for(e)
         tempo = _tempo_from_row(e, tempo_col) or None
         if not tempo:
@@ -159,7 +162,7 @@ def _insert_rows(conn: sqlite3.Connection, table: str, tempo_col: str, rows: Seq
             else:
                 raise
     conn.commit()
-    return ins, missing, dup
+    return ins, missing, dup, skipped_non_active
 
 # ------------------------------
 # Fetch with logs
@@ -182,7 +185,7 @@ def _fetch_with_logs(kind: str, library_id: str, limit: int, last_iso: Optional[
     else:
         rows = _fetch_full(library_id, limit=limit, progress=on_page)
 
-    _log(f"[{kind}] Completato: {pages} pagine, {total} righe in {round(0.0,3)}s")
+    _log(f"[{kind}] Completato: {pages} pagine, {total} righe")
     return rows
 
 # ------------------------------
@@ -344,6 +347,11 @@ def _import_section(
     # Compute new checkpoint from fetched rows (max remote modified/created)
     new_checkpoint = _max_remote_iso(rows)
 
+    # Filter to ACTIVE only for downstream steps (skip 'trash' and others)
+    total_before_filter = len(rows)
+    rows = [e for e in rows if _is_active(e)]
+    _log(f"[{sect}] Filtrati non-active: {total_before_filter - len(rows)} (mantengo solo 'active': {len(rows)})")
+
     # Decide enrichment
     if enrich_details is False:
         _log("Enrichment DISABILITATO da config → salto arricchimento.")
@@ -357,7 +365,7 @@ def _import_section(
             local_state = _local_state_map(conn, table)
             _log(f"[{sect}] Righe locali viste: {len(local_state)}")
 
-            # Select candidates: ONLY new or modified (enrich_only_new kept for clarity but we already cover mods)
+            # Select candidates: ONLY new or modified (on ACTIVE rows only)
             candidates: List[Dict[str, Any]] = []
             skipped_unchanged = 0
             for e in rows:
@@ -391,10 +399,10 @@ def _import_section(
             else:
                 _log("Nessun candidato da arricchire (tutti nuovi già completi o invariati).")
 
-    # Insert
+    # Insert (defensive skip non-active also inside)
     _log("Costruzione payload SQLite…")
-    ins, miss, dup = _insert_rows(conn, table, tempo_col, rows)
-    _log(f"Inserite {ins}/{len(rows)} (saltate senza tempo: {miss}, ignorate come duplicati: {dup})")
+    ins, miss, dup, skipped_non_active = _insert_rows(conn, table, tempo_col, rows)
+    _log(f"Inserite {ins}/{len(rows)} (saltate senza tempo: {miss}, ignorate come duplicati: {dup}, skippate non-active: {skipped_non_active})")
 
     # Update checkpoint (incremental)
     if sync_mode == "incremental":
@@ -403,6 +411,23 @@ def _import_section(
             _log(f"Aggiorno checkpoint a: {new_checkpoint}")
         else:
             _log("Nessun timestamp remoto rilevato: checkpoint invariato.")
+
+    # ------------------------------
+    # AUTO-RUN FIELD EXPANDER
+    # ------------------------------
+    try:
+        db_file = conn.execute("PRAGMA database_list").fetchall()[0][2]
+    except Exception:
+        db_file = None
+    if db_file:
+        try:
+            from memento_field_expander import expand_fields
+            _log(f"[{sect}] Avvio expander campi → tabella '{table}'")
+            expand_fields(db_file, table)
+        except Exception as ex:
+            _log(f"[{sect}] Expander non riuscito: {ex}")
+    else:
+        _log(f"[{sect}] Impossibile determinare il percorso DB per l'expander.")
 
     _log(f"Fine sezione [{sect}] → tentate: {len(rows)}, inserite: {ins}.")
     return sect, ins
