@@ -1,0 +1,45 @@
+
+{% extends "base.html" %}
+{% block content %}
+<section class="content">
+  <h1>Esplora file (C: e Z:)</h1>
+
+  {% if mode == "root" %}
+    <p>Seleziona un disco da esplorare:</p>
+    <ul class="file-browser-drives">
+      {% for d in drives %}
+        <li><a class="btn" href="{{ d.url }}">{{ d.name }}</a></li>
+      {% else %}
+        <li><em>Nessun disco disponibile (controlla C: e Z:)</em></li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p>
+      Disco: <strong>{{ drive }}:</strong><br>
+      Percorso: <code>{{ display_path }}</code>
+    </p>
+
+    {% if parent_url %}
+      <p><a href="{{ parent_url }}">⬆️ Cartella superiore</a></p>
+    {% endif %}
+
+    <h2>Cartelle</h2>
+    <ul class="file-browser-dirs">
+      {% for d in dirs %}
+        <li>📁 <a href="{{ d.url }}">{{ d.name }}</a></li>
+      {% else %}
+        <li><em>Nessuna sottocartella in questa directory</em></li>
+      {% endfor %}
+    </ul>
+
+    <h2>File</h2>
+    <ul class="file-browser-files">
+      {% for f in files %}
+        <li>📄 <a href="{{ f.url }}">{{ f.name }}</a></li>
+      {% else %}
+        <li><em>Nessun file in questa directory</em></li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+</section>
+{% endblock %}

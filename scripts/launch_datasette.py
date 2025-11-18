@@ -18,6 +18,7 @@ OUTPUT_DB = BASE_DIR / "output.db"
 TEMPLATES = BASE_DIR / "templates"
 STATIC_DIR = BASE_DIR / "static" / "custom"
 METADATA = BASE_DIR / "metadata.json"
+PLUGINS = BASE_DIR / "plugins"
 
 def main() -> int:
     ap = argparse.ArgumentParser()
@@ -40,6 +41,8 @@ def main() -> int:
         cmd += ["--static", f"custom:{STATIC_DIR}"]
     if METADATA.exists():
         cmd += ["--metadata", str(METADATA)]
+    if PLUGINS.exists():
+        cmd += ["--plugins-dir", str(PLUGINS)]
 
     https = False
     if args.ssl_certfile and args.ssl_keyfile:

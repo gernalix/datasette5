@@ -70,7 +70,6 @@
   <script src="/custom/link_columns.js?v=3"></script>
 {% endblock %}
 
-
 <script>
 /* Robust anti-flicker fallback: ensures the loader disappears regardless of other errors */
 (function(){
@@ -80,17 +79,49 @@
     done = true;
     try { document.body.classList.add('ready'); } catch(e){ /* ignore */ }
   }
-  // 1) As soon as DOM is interactive/complete
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', ready, {once:true});
   } else {
-    // DOM already parsed
     setTimeout(ready, 0);
   }
-  // 2) On full load (images/css/js)
   window.addEventListener('load', ready, {once:true});
-  // 3) Absolute timeout fallback in case events don't fire
   setTimeout(ready, 3000);
+})();
+</script>
+
+<!-- ⭐⭐ NAV PERSONALIZZATA AGGIUNTA QUI ⭐⭐ -->
+<header>
+  <div class="content">
+    <h1>home</h1>
+
+    <nav style="margin-top: 0.3rem; font-size: 1.2rem;">
+      <a href="/">home</a>
+      <a href="/files/" style="margin-left: 1.2rem;">files</a>
+    </nav>
+  </div>
+</header>
+<!-- ⭐⭐ FINE NAV ⭐⭐ -->
+
+<script>
+(function(){
+  function addFilesLink(){
+    try {
+      var nav = document.querySelector('header nav') || document.querySelector('nav');
+      if (!nav) return;
+      if (nav.querySelector('a[href="/files/"]')) return;
+      var link = document.createElement('a');
+      link.href = '/files/';
+      link.textContent = 'File';
+      nav.appendChild(link);
+    } catch (e) {
+      console && console.warn && console.warn('file link nav error', e);
+    }
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', addFilesLink, {once:true});
+  } else {
+    addFilesLink();
+  }
 })();
 </script>
 

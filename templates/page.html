@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block body %}
+<div>
+<header class="site-header">
+  <div class="content">
+    <h1>{{ database or "home" }}</h1>
+
+    <!-- ⭐ LINK AGGIUNTO QUI -->
+    <nav class="site-nav">
+      <a href="/">home</a>
+      <a href="/files/" style="margin-left: 1.2rem;">files</a>
+    </nav>
+    <!-- ⭐ FINE AGGIUNTA -->
+  </div>
+</header>
+
+<main class="content">
+  {% block content %}{% endblock %}
+</main>
+
+<footer class="site-footer">
+  <div class="content">
+    Powered by <a href="https://datasette.io/" target="_blank" rel="noopener">Datasette</a>
+  </div>
+</footer>
+</div>
+{% endblock %}
