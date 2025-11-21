@@ -15,23 +15,29 @@
       {% for col in columns %}
         <div class="sex-row">
           <div class="sex-label">
-            <label for="col_{{ col.name }}">{{ col.name }}</label>
+            <label for="search_{{ col.name }}">{{ col.name }}</label>
           </div>
           <div class="sex-input">
             {% if col.is_fk %}
-              <div class="fk-field">
+              <div class="fk-field" data-col-name="{{ col.name }}">
                 <input
                   type="text"
                   class="fk-search"
+                  id="search_{{ col.name }}"
                   placeholder="Filtra {{ col.fk_table }}..."
-                  data-target="col_{{ col.name }}"
                 >
-                <select id="col_{{ col.name }}" name="{{ col.name }}">
-                  <option value="">-- seleziona {{ col.fk_table }} --</option>
+                <input
+                  type="hidden"
+                  class="fk-hidden"
+                  id="col_{{ col.name }}"
+                  name="{{ col.name }}"
+                  value=""
+                >
+                <div class="fk-dropdown">
                   {% for opt in col.options %}
-                    <option value="{{ opt.id }}">{{ opt.label }}</option>
+                    <div class="fk-option" data-id="{{ opt.id }}">{{ opt.label }}</div>
                   {% endfor %}
-                </select>
+                </div>
               </div>
             {% else %}
               {% if col.name in ["inizio", "fine"] %}
@@ -87,8 +93,8 @@
 /* UNA RIGA PER CAMPO, STILE "EXCEL" */
 #sex-compact .sex-row {
   display: flex;
-  align-items: center;
-  margin-bottom: 2px;   /* <-- distanza tra i campi */
+  align-items: flex-start;
+  margin-bottom: 2px;   /* distanza tra i campi */
   font-size: 0.8rem;
 }
 
@@ -105,10 +111,9 @@
   flex: 1;
 }
 
-/* input e select compatti */
+/* input compatti */
 #sex-compact input[type="text"],
-#sex-compact input[type="datetime-local"],
-#sex-compact select {
+#sex-compact input[type="datetime-local"] {
   padding: 1px 2px;
   font-size: 0.8rem;
   max-width: 260px;
@@ -116,16 +121,37 @@
   box-sizing: border-box;
 }
 
-/* quando il select si apre (size>1), limitiamo solo l’altezza massima */
-#sex-compact select[size] {
-  max-height: 130px;
+/* gruppi FK: il dropdown deve sovrapporsi */
+#sex-compact .fk-field {
+  position: relative;
+  display: inline-block;
+  max-width: 260px;
 }
 
-/* gruppi FK in colonna, poco spazio */
-#sex-compact .fk-field {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
+/* dropdown custom che si sovrappone ai campi sottostanti */
+#sex-compact .fk-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid #ccc;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+  max-height: 180px;
+  overflow-y: auto;
+  display: none; /* viene aperto via JS */
+  z-index: 9999;
+  font-size: 0.8rem;
+}
+
+/* singola opzione nel dropdown */
+#sex-compact .fk-option {
+  padding: 2px 4px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+#sex-compact .fk-option:hover {
+  background: #eee;
 }
 
 /* azzera spazio sotto i pulsanti */
@@ -136,70 +162,77 @@
 </style>
 
 <script>
-// --- FK: filtro + lista "aperta" mentre scrivi ------------------------------
+// --- FK: dropdown custom che si sovrappone ai campi ------------------------
 (function() {
   function normalize(str) {
     return (str || "").toLowerCase();
   }
 
-  function countVisibleOptions(selectEl) {
-    var count = 0;
-    var opts = selectEl.options;
-    for (var i = 0; i < opts.length; i++) {
-      if (!opts[i].hidden) count++;
+  function setupField(field) {
+    var search = field.querySelector(".fk-search");
+    var hidden = field.querySelector(".fk-hidden");
+    var dropdown = field.querySelector(".fk-dropdown");
+    if (!search || !hidden || !dropdown) return;
+
+    var options = Array.prototype.slice.call(
+      dropdown.querySelectorAll(".fk-option")
+    );
+
+    function openDropdown() {
+      dropdown.style.display = "block";
     }
-    return count;
-  }
 
-  function expandSelect(selectEl) {
-    var visible = countVisibleOptions(selectEl);
-    var total = selectEl.options.length;
-    var size = visible || total || 2;
-    if (size > 10) size = 10;
-    if (size < 2) size = 2;
-    selectEl.size = size;
-    selectEl.dataset.expanded = "1";
-    selectEl.style.maxHeight = "130px";
-  }
+    function closeDropdown() {
+      dropdown.style.display = "none";
+    }
 
-  function filterSelect(selectEl, query) {
-    var q = normalize(query);
-    var opts = selectEl.options;
+    function filterOptions(query) {
+      var q = normalize(query);
+      var anyVisible = false;
 
-    for (var i = 0; i < opts.length; i++) {
-      var opt = opts[i];
+      options.forEach(function(opt) {
+        var text = normalize(opt.textContent || "");
+        var match = !q || text.indexOf(q) !== -1;
+        opt.style.display = match ? "block" : "none";
+        if (match) anyVisible = true;
+      });
 
-      if (!opt.value) {
-        opt.hidden = false;
-        continue;
+      // se nessun match, teniamo il menu aperto ma vuoto (o potremmo chiuderlo)
+      openDropdown();
+    }
+
+    // apertura: focus o click nel campo di ricerca
+    search.addEventListener("focus", function() {
+      filterOptions(search.value);
+    });
+    search.addEventListener("click", function() {
+      filterOptions(search.value);
+    });
+
+    // mentre scrivi, filtriamo e teniamo aperto
+    search.addEventListener("input", function() {
+      filterOptions(search.value);
+    });
+
+    // click su opzione: impostiamo id + label, poi chiudiamo
+    options.forEach(function(opt) {
+      opt.addEventListener("click", function() {
+        hidden.value = opt.getAttribute("data-id");
+        search.value = opt.textContent;
+        closeDropdown();
+      });
+    });
+
+    // click fuori dal campo: chiudi il menu
+    document.addEventListener("click", function(ev) {
+      if (!field.contains(ev.target)) {
+        closeDropdown();
       }
-
-      var text = normalize(opt.textContent || opt.innerText || "");
-      opt.hidden = text.indexOf(q) === -1;
-    }
-
-    if (selectEl.dataset.expanded === "1") {
-      expandSelect(selectEl);
-    }
+    });
   }
 
-  var inputs = document.querySelectorAll(".fk-search");
-  inputs.forEach(function(input) {
-    var targetId = input.getAttribute("data-target");
-    if (!targetId) return;
-    var selectEl = document.getElementById(targetId);
-    if (!selectEl) return;
-
-    // quando entri nel campo di ricerca, apri la lista
-    input.addEventListener("focus", function() {
-      expandSelect(selectEl);
-    });
-
-    // mentre scrivi, filtra mantenendo aperto
-    input.addEventListener("input", function() {
-      filterSelect(selectEl, input.value);
-    });
-  });
+  var fields = document.querySelectorAll(".fk-field");
+  fields.forEach(setupField);
 })();
 </script>
 
