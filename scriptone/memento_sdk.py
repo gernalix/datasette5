@@ -9,6 +9,13 @@ import os
 import re
 
 import requests
+import certifi
+
+for var in ("REQUESTS_CA_BUNDLE", "SSL_CERT_FILE", "CURL_CA_BUNDLE"):
+    os.environ.pop(var, None)
+
+os.environ["SSL_CERT_FILE"] = certifi.where()
+
 
 # -----------------------
 # Config helpers
