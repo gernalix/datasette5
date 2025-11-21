@@ -28,6 +28,43 @@
 
   <!-- ✅ AGGIUNTA MINIMA: carica lo script unificato -->
   <script defer src="/custom/bool_and_link_unified.js?v=5"></script>
+
+  <!-- ⭐⭐⭐ AGGIUNTA RICHIESTA: COMPATTA /sex/insert ⭐⭐⭐ -->
+  {% if request and request.path == "/sex/insert" %}
+  <style>
+    /* RESET TOTALE SOLO PER /sex/insert */
+    body, html, main, article, section, .content {
+      margin: 0 !important;
+      padding: 0 !important;
+    }
+
+    /* comprime la tabella del form */
+    table.rows-and-columns.form-table {
+      margin: 0 !important;
+      padding: 0 !important;
+      border-collapse: collapse !important;
+      border-spacing: 0 !important;
+    }
+
+    table.rows-and-columns.form-table tr {
+      margin: 0 !important;
+      padding: 0 !important;
+      height: auto !important;
+      line-height: 1 !important;
+    }
+
+    table.rows-and-columns.form-table th,
+    table.rows-and-columns.form-table td {
+      margin: 0 !important;
+      padding: 2px 4px !important;
+      line-height: 1 !important;
+      vertical-align: middle !important;
+      font-size: 0.85rem !important;
+    }
+  </style>
+  {% endif %}
+  <!-- ⭐⭐⭐ FINE MODIFICA ⭐⭐⭐ -->
+
 {% endblock %}
 
 {% block extra_body %}

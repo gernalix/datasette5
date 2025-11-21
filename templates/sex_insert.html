@@ -1,0 +1,256 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="content">
+  <div id="sex-compact">
+    <h1>Nuovo record in "sex"</h1>
+
+    {% if message %}
+      <p class="message">{{ message }}</p>
+    {% endif %}
+
+    <form method="POST">
+      <input type="hidden" name="csrftoken" value="{{ csrftoken() }}">
+
+      <table class="rows-and-columns form-table">
+        <tbody>
+        {% for col in columns %}
+          <tr>
+            <th>
+              <label for="col_{{ col.name }}">{{ col.name }}</label>
+            </th>
+            <td>
+              {% if col.is_fk %}
+                <div class="fk-field">
+                  <input
+                    type="text"
+                    class="fk-search"
+                    placeholder="Filtra {{ col.fk_table }}..."
+                    data-target="col_{{ col.name }}"
+                  >
+                  <select id="col_{{ col.name }}" name="{{ col.name }}">
+                    <option value="">-- seleziona {{ col.fk_table }} --</option>
+                    {% for opt in col.options %}
+                      <option value="{{ opt.id }}">{{ opt.label }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+              {% else %}
+                {% if col.name in ["inizio", "fine"] %}
+                  <input
+                    type="datetime-local"
+                    id="col_{{ col.name }}_picker"
+                    class="dt-picker"
+                    data-target="col_{{ col.name }}"
+                  >
+                  <input
+                    type="hidden"
+                    id="col_{{ col.name }}"
+                    name="{{ col.name }}"
+                    value=""
+                  >
+                {% else %}
+                  <input
+                    type="text"
+                    id="col_{{ col.name }}"
+                    name="{{ col.name }}"
+                    value=""
+                  >
+                {% endif %}
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+
+      <p class="form-actions">
+        <button type="submit" class="btn">Salva</button>
+        <a href="{{ table_url }}" class="btn">Torna alla tabella sex</a>
+      </p>
+    </form>
+  </div>
+</section>
+
+<style>
+/* ISOLAMENTO CSS: azzera quasi tutto dentro #sex-compact per eliminare gli spazi verticali */
+#sex-compact * {
+  margin: 0 !important;
+  padding: 0 !important;
+  box-sizing: border-box !important;
+}
+
+/* contenitore leggermente staccato dai bordi */
+#sex-compact {
+  padding: 4px 8px !important;
+}
+
+/* titolo e messaggi con margine minimo */
+#sex-compact h1 {
+  margin: 0 0 4px 0 !important;
+  font-size: 1.1rem !important;
+}
+#sex-compact p.message {
+  margin: 0 0 4px 0 !important;
+}
+
+/* tabella super compatta */
+#sex-compact table.rows-and-columns.form-table {
+  border-collapse: collapse !important;
+  border-spacing: 0 !important;
+  margin: 0 !important;
+}
+
+/* righe attaccate */
+#sex-compact table.rows-and-columns.form-table tr {
+  height: auto !important;
+  line-height: 1.05 !important;
+}
+
+/* celle strette */
+#sex-compact table.rows-and-columns.form-table th,
+#sex-compact table.rows-and-columns.form-table td {
+  padding: 2px 4px !important;
+  border: 0 !important;
+  vertical-align: middle !important;
+  font-size: 0.85rem !important;
+}
+
+/* label compatta a destra */
+#sex-compact table.rows-and-columns.form-table th {
+  white-space: nowrap !important;
+  text-align: right !important;
+}
+
+/* input piccoli (ma NON i select, per non bloccare la lista aperta) */
+#sex-compact input[type="text"],
+#sex-compact input[type="datetime-local"] {
+  padding: 1px 2px !important;
+  font-size: 0.85rem !important;
+  max-width: 220px !important;
+  height: 22px !important;
+}
+
+/* select compatti ma con altezza libera se size>1 */
+#sex-compact select {
+  padding: 1px 2px !important;
+  font-size: 0.85rem !important;
+  max-width: 220px !important;
+}
+#sex-compact select[size] {
+  max-height: 130px !important;
+}
+
+/* gruppi FK in colonna, quasi nessuno spazio */
+#sex-compact .fk-field {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 2px !important;
+}
+
+/* azzera spazio sotto i pulsanti */
+#sex-compact .form-actions {
+  margin-top: 4px !important;
+  margin-bottom: 0 !important;
+  font-size: 0.85rem !important;
+}
+</style>
+
+<script>
+// --- UTIL PER FK (filtri + lista aperta) ------------------------------------
+(function() {
+  function normalize(str) {
+    return (str || "").toLowerCase();
+  }
+
+  function countVisibleOptions(selectEl) {
+    var count = 0;
+    var opts = selectEl.options;
+    for (var i = 0; i < opts.length; i++) {
+      if (!opts[i].hidden) count++;
+    }
+    return count;
+  }
+
+  function expandSelect(selectEl) {
+    var visible = countVisibleOptions(selectEl);
+    var total = selectEl.options.length;
+    var size = visible || total || 2;
+    if (size > 10) size = 10;
+    if (size < 2) size = 2;
+    selectEl.size = size;
+    selectEl.dataset.expanded = "1";
+    selectEl.style.maxHeight = "130px";
+  }
+
+  function filterSelect(selectEl, query) {
+    var q = normalize(query);
+    var opts = selectEl.options;
+
+    for (var i = 0; i < opts.length; i++) {
+      var opt = opts[i];
+
+      if (!opt.value) {
+        opt.hidden = false;
+        continue;
+      }
+
+      var text = normalize(opt.textContent || opt.innerText || "");
+      opt.hidden = text.indexOf(q) === -1;
+    }
+
+    if (selectEl.dataset.expanded === "1") {
+      expandSelect(selectEl);
+    }
+  }
+
+  var inputs = document.querySelectorAll(".fk-search");
+  inputs.forEach(function(input) {
+    var targetId = input.getAttribute("data-target");
+    if (!targetId) return;
+    var selectEl = document.getElementById(targetId);
+    if (!selectEl) return;
+
+    // quando entri nel campo di ricerca, apri la lista
+    input.addEventListener("focus", function() {
+      expandSelect(selectEl);
+    });
+
+    // mentre scrivi, filtra mantenendo aperto
+    input.addEventListener("input", function() {
+      filterSelect(selectEl, input.value);
+    });
+  });
+})();
+</script>
+
+<script>
+// --- DATETIME-LOCAL -> stringa per SQLite (YYYY-MM-DD HH:MM[:SS]) ----------
+(function() {
+  function convertDateTimeLocalToSqlite(value) {
+    if (!value) return "";
+    var parts = value.split("T");
+    if (parts.length !== 2) return value;
+
+    var date = parts[0];
+    var time = parts[1];
+
+    if (time.length === 5) { // HH:MM
+      time = time + ":00";
+    }
+    return date + " " + time;
+  }
+
+  var pickers = document.querySelectorAll(".dt-picker");
+  pickers.forEach(function(picker) {
+    var targetId = picker.getAttribute("data-target");
+    if (!targetId) return;
+    var hidden = document.getElementById(targetId);
+    if (!hidden) return;
+
+    picker.addEventListener("change", function() {
+      hidden.value = convertDateTimeLocalToSqlite(picker.value);
+    });
+  });
+})();
+</script>
+{% endblock %}
