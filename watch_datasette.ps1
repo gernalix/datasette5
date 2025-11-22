@@ -11,6 +11,7 @@ $caltxt    = Join-Path $root 'static\custom\calendar_columns.txt'
 $templates = Join-Path $root 'templates'
 $staticCus = 'custom:' + (Join-Path $root 'static\custom')
 $metadata  = Join-Path $root 'metadata.json'
+$plugins   = Join-Path $root 'plugins'     # <── CARTELLA PLUGIN
 
 $bindHost = '0.0.0.0'
 $bindPort = '8001'
@@ -37,14 +38,16 @@ function Show-Toast {
 
     try {
         $templateType = [Windows.UI.Notifications.ToastTemplateType]::ToastText02
-        $xml          = [Windows.UI.Notifications.ToastNotificationManager]::GetTemplateContent($templateType)
+        $xmlTemplate  = [Windows.UI.Notifications.ToastNotificationManager]::GetTemplateContent($templateType)
+        $xml          = [Windows.Data.Xml.Dom.XmlDocument]::new()
+        $xml.LoadXml($xmlTemplate.GetXml())
 
         $texts = $xml.GetElementsByTagName('text')
         $null  = $texts.Item(0).AppendChild($xml.CreateTextNode($Title))
         $null  = $texts.Item(1).AppendChild($xml.CreateTextNode($Message))
 
-        $toast   = [Windows.UI.Notifications.ToastNotification]::new($xml)
-        $appId   = 'DatasetteDashboard'
+        $toast    = [Windows.UI.Notifications.ToastNotification]::new($xml)
+        $appId    = 'DatasetteDashboard'
         $notifier = [Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier($appId)
         $notifier.Show($toast)
     } catch {
@@ -87,6 +90,15 @@ function Start-DS {
         '--metadata',     $metadata
     )
 
+    # === PLUGIN DIR =====================================================
+    if (Test-Path -LiteralPath $plugins) {
+        Write-Host ("[INFO] Plugins dir: {0}" -f $plugins)
+        $args += @('--plugins-dir', $plugins)
+    } else {
+        Write-Host ("[WARN] Cartella plugin NON trovata: {0}" -f $plugins)
+    }
+    # ===================================================================
+
     $useHttps = (Test-Path -LiteralPath $cert) -and (Test-Path -LiteralPath $key)
     if ($useHttps) {
         $args += @('--ssl-certfile', $cert, '--ssl-keyfile', $key)
@@ -94,6 +106,10 @@ function Start-DS {
     } else {
         Write-Host ("[INFO] Modalita': HTTP (host={0} port={1})" -f $bindHost, $bindPort)
     }
+
+    # Mostra il comando completo per debug
+    Write-Host "[CMD] Avvio Datasette con comando:"
+    Write-Host ("      {0} {1}" -f $venv, ($args -join ' '))
 
     # Avvia Datasette in finestra nascosta
     $global:proc = Start-Process -FilePath $venv `
@@ -119,77 +135,69 @@ function Stop-DS {
     }
 }
 
-# ===========================
-#  LETTURA watch_dirs.ini
-# ===========================
-$watchListFile = Join-Path $root 'watch_dirs.ini'
-$watchDirs = @()
+# =====================
+#  FILESYSTEM WATCHER
+# =====================
 
-if (Test-Path $watchListFile) {
-    $lines = Get-Content $watchListFile |
-        ForEach-Object { $_.Trim() } |
-        Where-Object { $_ -ne '' -and -not $_.StartsWith('#') -and -not $_.StartsWith(';') }
+$global:changed    = $false
+$global:lastChange = Get-Date
 
-    foreach ($line in $lines) {
-        $full = Join-Path $root $line
-        if (Test-Path $full) {
-            $watchDirs += $full
-        } else {
-            Write-Host "[WARN] Cartella da monitorare non trovata (ignorata): $line"
-        }
-    }
-}
-
-if (-not $watchDirs -or $watchDirs.Count -eq 0) {
-    Write-Host "[WARN] Nessuna cartella valida in watch_dirs.ini, monitoro la root del progetto."
-    $watchDirs = @($root)
-}
-
-# ===========================
-#  WATCHER FILE + RIAVVIO
-# ===========================
-
-$global:changed      = $false
-$global:lastRestart  = Get-Date
-
-# Primo avvio
-Start-DS
-
-# Crea un watcher per ogni cartella
-$notifyFilters = [IO.NotifyFilters]::FileName `
-                 -bor [IO.NotifyFilters]::LastWrite `
-                 -bor [IO.NotifyFilters]::DirectoryName
+$watchPaths = @(
+    (Join-Path $root 'templates'),
+    (Join-Path $root 'plugins'),
+    (Join-Path $root 'scripts'),
+    (Join-Path $root 'custom'),
+    (Join-Path $root 'static')
+)
 
 $watchers = @()
 
-foreach ($dir in $watchDirs) {
-    $fsw = New-Object IO.FileSystemWatcher $dir -Property @{
-        IncludeSubdirectories = $true
-        EnableRaisingEvents   = $true
-        NotifyFilter          = $notifyFilters
-    }
+foreach ($path in $watchPaths) {
+    if (-not (Test-Path -LiteralPath $path)) { continue }
+
+    Write-Host ("[WATCH] Monitoro: {0} (incluse sottocartelle)" -f $path)
+
+    $fsw = New-Object System.IO.FileSystemWatcher
+    $fsw.Path                  = $path
+    $fsw.IncludeSubdirectories = $true
+    $fsw.EnableRaisingEvents   = $true
+    $fsw.Filter                = '*.*'
+
+    Register-ObjectEvent $fsw 'Changed' -Action {
+        $global:changed    = $true
+        $global:lastChange = Get-Date
+    } | Out-Null
+    Register-ObjectEvent $fsw 'Created' -Action {
+        $global:changed    = $true
+        $global:lastChange = Get-Date
+    } | Out-Null
+    Register-ObjectEvent $fsw 'Deleted' -Action {
+        $global:changed    = $true
+        $global:lastChange = Get-Date
+    } | Out-Null
+    Register-ObjectEvent $fsw 'Renamed' -Action {
+        $global:changed    = $true
+        $global:lastChange = Get-Date
+    } | Out-Null
 
     $watchers += $fsw
-
-    Register-ObjectEvent $fsw Changed -Action { $global:changed = $true } > $null
-    Register-ObjectEvent $fsw Created -Action { $global:changed = $true } > $null
-    Register-ObjectEvent $fsw Deleted -Action { $global:changed = $true } > $null
-    Register-ObjectEvent $fsw Renamed -Action { $global:changed = $true } > $null
-
-    Write-Host "[WATCH] Monitoro: $dir (incluse sottocartelle)"
 }
 
-# Loop principale con piccolo debounce
-while ($true) {
-    Start-Sleep -Milliseconds 500
+Write-Host ''
+Write-Host '========================================================='
+Write-Host " Avvio Auto Calendar + Datasette in modalita'' WATCH"
+Write-Host (" Root progetto: {0}" -f $root)
+Write-Host '========================================================='
+Write-Host ''
 
-    if ($global:changed) {
-        $now = Get-Date
-        # Debounce: aspetta almeno 1.5 secondi tra un riavvio e l'altro
-        if (($now - $global:lastRestart).TotalSeconds -ge 1.5) {
+Start-DS
+
+try {
+    while ($true) {
+        Start-Sleep -Milliseconds 500
+
+        if ($global:changed -and ((Get-Date) - $global:lastChange).TotalMilliseconds -gt 500) {
             $global:changed = $false
-            $global:lastRestart = $now
-
             Write-Host '[WATCH] Modifica rilevata in una cartella monitorata, riavvio Datasette...'
 
             # Piccola pausa per lasciare finire le scritture su disco
@@ -197,9 +205,11 @@ while ($true) {
 
             Stop-DS $global:proc
             Start-DS
-        } else {
-            # Troppo vicino all’ultimo riavvio: ignoro questa raffica
-            $global:changed = $false
         }
+    }
+} finally {
+    foreach ($w in $watchers) {
+        $w.EnableRaisingEvents = $false
+        $w.Dispose()
     }
 }
