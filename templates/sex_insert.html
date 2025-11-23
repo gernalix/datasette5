@@ -25,6 +25,7 @@
                   class="fk-search"
                   id="search_{{ col.name }}"
                   placeholder="Filtra {{ col.fk_table }}..."
+                  autocomplete="off"
                 >
                 <input
                   type="hidden"
@@ -75,60 +76,82 @@
 </section>
 
 <style>
-/* ISOLAMENTO: tutto il form è dentro #sex-compact */
-#sex-compact {
-  padding: 4px 8px !important;
+/* FORZATURA DEFINITIVA CONTRO IL CSS DI DATASETTE */
+#sex-compact .sex-label label {
+  display: inline-block !important;
+  width: 220px !important;
+  min-width: 220px !important;
+  max-width: none !important;
+  white-space: nowrap !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
 }
 
-/* titolo + messaggi con poco spazio */
+#sex-compact .sex-label {
+  width: 220px !important;
+  min-width: 220px !important;
+  max-width: none !important;
+  overflow: visible !important;
+}
+
+/* CONTENITORE GENERALE */
+#sex-compact {
+  padding: 4px 8px;
+}
+
+/* TITOLO + MESSAGGIO COMPATTI */
 #sex-compact h1 {
-  margin: 0 0 4px 0 !important;
-  font-size: 1.0rem !important;
+  margin: 0 0 4px 0;
+  font-size: 1.0rem;
 }
 #sex-compact p.message {
-  margin: 0 0 4px 0 !important;
-  font-size: 0.85rem !important;
+  margin: 0 0 4px 0;
+  font-size: 0.85rem;
 }
 
 /* UNA RIGA PER CAMPO, STILE "EXCEL" */
 #sex-compact .sex-row {
   display: flex;
-  align-items: flex-start;
-  margin-bottom: 2px;   /* distanza tra i campi */
+  align-items: center;
+  margin-bottom: 2px;
   font-size: 0.8rem;
 }
 
-/* label stretta, a destra */
+/* LABEL A SINISTRA, NON TAGLIATE */
 #sex-compact .sex-label {
-  width: 130px;
+  flex: 0 0 220px;
   text-align: right;
   padding-right: 6px;
+}
+#sex-compact .sex-label label {
+  display: inline-block;
+  max-width: none;
   white-space: nowrap;
+  overflow: visible;
+  text-overflow: clip;
 }
 
-/* input a destra, che occupa il resto */
+/* INPUT A DESTRA, LARGHEZZA FISSA TIPO EXCEL */
 #sex-compact .sex-input {
-  flex: 1;
+  flex: 0 0 auto;
 }
-
-/* input compatti */
 #sex-compact input[type="text"],
 #sex-compact input[type="datetime-local"] {
+  width: 260px;
+  max-width: 260px;
   padding: 1px 2px;
   font-size: 0.8rem;
-  max-width: 260px;
-  height: 20px;
   box-sizing: border-box;
 }
 
-/* gruppi FK: il dropdown deve sovrapporsi */
+/* GRUPPI FK: DROPDOWN SOVRAPPOSTO */
 #sex-compact .fk-field {
   position: relative;
   display: inline-block;
-  max-width: 260px;
+  width: 260px;
 }
 
-/* dropdown custom che si sovrappone ai campi sottostanti */
+/* DROPDOWN CHE SI SOVRAPPONE AI CAMPI SOTTOSTANTI */
 #sex-compact .fk-dropdown {
   position: absolute;
   top: 100%;
@@ -139,12 +162,12 @@
   box-shadow: 0 2px 4px rgba(0,0,0,0.15);
   max-height: 180px;
   overflow-y: auto;
-  display: none; /* viene aperto via JS */
+  display: none;
   z-index: 9999;
   font-size: 0.8rem;
 }
 
-/* singola opzione nel dropdown */
+/* OPZIONI NEL DROPDOWN */
 #sex-compact .fk-option {
   padding: 2px 4px;
   cursor: pointer;
@@ -154,7 +177,7 @@
   background: #eee;
 }
 
-/* azzera spazio sotto i pulsanti */
+/* PULSANTI FINALI */
 #sex-compact .sex-actions {
   margin-top: 4px;
   font-size: 0.8rem;
@@ -174,9 +197,7 @@
     var dropdown = field.querySelector(".fk-dropdown");
     if (!search || !hidden || !dropdown) return;
 
-    var options = Array.prototype.slice.call(
-      dropdown.querySelectorAll(".fk-option")
-    );
+    var options = dropdown.querySelectorAll(".fk-option");
 
     function openDropdown() {
       dropdown.style.display = "block";
@@ -188,42 +209,37 @@
 
     function filterOptions(query) {
       var q = normalize(query);
-      var anyVisible = false;
-
-      options.forEach(function(opt) {
+      for (var i = 0; i < options.length; i++) {
+        var opt = options[i];
         var text = normalize(opt.textContent || "");
         var match = !q || text.indexOf(q) !== -1;
         opt.style.display = match ? "block" : "none";
-        if (match) anyVisible = true;
-      });
-
-      // se nessun match, teniamo il menu aperto ma vuoto (o potremmo chiuderlo)
+      }
       openDropdown();
     }
 
-    // apertura: focus o click nel campo di ricerca
     search.addEventListener("focus", function() {
       filterOptions(search.value);
     });
+
     search.addEventListener("click", function() {
       filterOptions(search.value);
     });
 
-    // mentre scrivi, filtriamo e teniamo aperto
     search.addEventListener("input", function() {
       filterOptions(search.value);
     });
 
-    // click su opzione: impostiamo id + label, poi chiudiamo
-    options.forEach(function(opt) {
-      opt.addEventListener("click", function() {
-        hidden.value = opt.getAttribute("data-id");
-        search.value = opt.textContent;
-        closeDropdown();
-      });
-    });
+    for (var i = 0; i < options.length; i++) {
+      (function(opt) {
+        opt.addEventListener("click", function() {
+          hidden.value = opt.getAttribute("data-id");
+          search.value = opt.textContent;
+          closeDropdown();
+        });
+      })(options[i]);
+    }
 
-    // click fuori dal campo: chiudi il menu
     document.addEventListener("click", function(ev) {
       if (!field.contains(ev.target)) {
         closeDropdown();
@@ -231,8 +247,12 @@
     });
   }
 
-  var fields = document.querySelectorAll(".fk-field");
-  fields.forEach(setupField);
+  document.addEventListener("DOMContentLoaded", function() {
+    var fields = document.querySelectorAll(".fk-field");
+    for (var i = 0; i < fields.length; i++) {
+      setupField(fields[i]);
+    }
+  });
 })();
 </script>
 
@@ -253,16 +273,20 @@
     return date + " " + time;
   }
 
-  var pickers = document.querySelectorAll(".dt-picker");
-  pickers.forEach(function(picker) {
-    var targetId = picker.getAttribute("data-target");
-    if (!targetId) return;
-    var hidden = document.getElementById(targetId);
-    if (!hidden) return;
+  document.addEventListener("DOMContentLoaded", function() {
+    var pickers = document.querySelectorAll(".dt-picker");
+    for (var i = 0; i < pickers.length; i++) {
+      (function(picker) {
+        var targetId = picker.getAttribute("data-target");
+        if (!targetId) return;
+        var hidden = document.getElementById(targetId);
+        if (!hidden) return;
 
-    picker.addEventListener("change", function() {
-      hidden.value = convertDateTimeLocalToSqlite(picker.value);
-    });
+        picker.addEventListener("change", function() {
+          hidden.value = convertDateTimeLocalToSqlite(picker.value);
+        });
+      })(pickers[i]);
+    }
   });
 })();
 </script>
