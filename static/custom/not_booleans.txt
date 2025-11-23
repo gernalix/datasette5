@@ -2,3 +2,4 @@ sex: id, inizio, fine, partner_id, sesh_id, orgia_id, interrotto_id,voto, luogo_
 calendar_range:inizio, tab, col, link, luogo_id
 partner: id
 luogo: maps, indirizzo
+interrotto: id

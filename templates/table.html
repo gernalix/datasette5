@@ -6,7 +6,9 @@
     /* Nascondi solo le opzioni di export (mai la sezione "Referenced by") */
     .export-options,
     .advanced-export,
-    .download-links { display: none !important; }
+    .download-links {
+      display: none !important;
+    }
   </style>
 {% endblock %}
 
@@ -14,27 +16,42 @@
   {{ super() }}
   <script>
     (function () {
-      // Applica solo alla tabella /output/calendar_range
-      if (!/\/output\/calendar_range(\/|$)/.test(location.pathname)) return;
-
-      // Nascondi SOLO il testo dell'SQL della view, senza rimuovere container/sezioni
-      const hideSQL = () => {
-        const rx = /CREATE\s+VIEW|AS\s+SELECT/i;
-        document.querySelectorAll('pre, code').forEach(el => {
-          const t = (el.textContent || "");
-          if (rx.test(t)) el.style.display = 'none';
-        });
-        // Nascondi link "View and edit SQL" senza toccare altro
-        Array.from(document.querySelectorAll('a, button')).forEach(el => {
-          const txt = (el.textContent || '').trim().toLowerCase();
-          if (txt === 'view and edit sql' || txt === 'view sql' || txt === 'sql') {
-            el.style.display = 'none';
+      function hideSQL() {
+        // 1) Nascondi SOLO i blocchi di testo SQL (pre/code) che contengono la definizione di una view
+        //    o una SELECT, senza rimuovere container interi
+        var rx = /CREATE\s+VIEW|AS\s+SELECT/i;
+        Array.prototype.forEach.call(
+          document.querySelectorAll('pre, code'),
+          function (el) {
+            var txt = el.textContent || '';
+            if (rx.test(txt)) {
+              // Nascondi solo il blocco corrente
+              el.style.display = 'none';
+            }
           }
-        });
-      };
+        );
+
+        // 2) Nascondi SOLO i link / bottoni che mostrano esplicitamente la SQL
+        Array.prototype.forEach.call(
+          document.querySelectorAll('a, button'),
+          function (el) {
+            var txt = (el.textContent || '').trim().toLowerCase();
+            if (txt === 'view and edit sql' || txt === 'view sql' || txt === 'sql') {
+              el.style.display = 'none';
+            }
+          }
+        );
+
+        // Importante: NON tocchiamo altre sezioni/box sotto la tabella,
+        // in particolare quelle che Datasette usa per i backlink
+        // ("Links from other tables" / "Referenced by").
+      }
 
       hideSQL();
-      new MutationObserver(hideSQL).observe(document.body, { childList: true, subtree: true });
+      new MutationObserver(hideSQL).observe(document.body, {
+        childList: true,
+        subtree: true
+      });
     })();
   </script>
 {% endblock %}
