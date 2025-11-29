@@ -1,4 +1,4 @@
-<!-- v7 -->
+<!-- v12 -->
 {% extends "base.html" %}
 
 {% block title %}Percorso GPS{% endblock %}
@@ -137,6 +137,13 @@
         );
       }
 
+      function formatTimestamp(ts) {
+        if (!ts) return "";
+        // da "2025-11-29T08:33:26+01:00" a "2025-11-29 08:33"
+        const clean = ts.split("+")[0].split("Z")[0]; // togli timezone/z
+        return clean.replace("T", " ").slice(0, 16);
+      }
+
       const startInput = document.getElementById("start-input");
       const endInput = document.getElementById("end-input");
       const clearBtn = document.getElementById("gps-clear");
@@ -200,29 +207,165 @@
       jsonUrl.searchParams.set("_shape", "array");
       jsonUrl.searchParams.set("_size", "max");
 
+      function deg2rad(d) { return d * Math.PI / 180; }
+      function distanceMeters(lat1, lon1, lat2, lon2) {
+        const R = 6371000; // raggio Terra
+        const dLat = deg2rad(lat2 - lat1);
+        const dLon = deg2rad(lon2 - lon1);
+        const a =
+          Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+          Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
+          Math.sin(dLon / 2) * Math.sin(dLon / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return R * c;
+      }
+
+      const NEAR_PLACE_RADIUS_M = 40; // punti liberi troppo vicini a un luogo vengono scartati
+      const MIN_STEP_M = 5;          // distanza minima tra due punti consecutivi nel percorso
+
       fetch(jsonUrl.toString())
         .then(r => r.json())
         .then(data => {
-          // con _shape=array data è direttamente una lista di oggetti
           const rows = Array.isArray(data) ? data : [];
 
-          const latlngs = [];
+          const luogoMarkers = {};   // per centroidi + range timestamp
+          const markerLatLngs = [];  // per fitBounds
+
+          // Prima passata: accumula i luoghi (centro + tstamp min/max)
           rows.forEach(row => {
             const latVal = row.lat ?? row.LAT ?? row.Lat;
             const lonVal = row.lon ?? row.LON ?? row.Lon;
-            if (latVal != null && lonVal != null) {
-              const lat = parseFloat(latVal);
-              const lon = parseFloat(lonVal);
-              if (!isNaN(lat) && !isNaN(lon)) {
-                latlngs.push([lat, lon]);
-              }
+            if (latVal == null || lonVal == null) return;
+
+            const lat = parseFloat(latVal);
+            const lon = parseFloat(lonVal);
+            if (isNaN(lat) || isNaN(lon)) return;
+
+            const luogoId = row.luogo_id ?? row.luogoID ?? row.luogo;
+            if (luogoId == null) return;
+
+            const luogoNome = row.luogo_nome ?? row.luogoName ?? row.indirizzo;
+            const tstampVal = row.tstamp ?? row.ts ?? row.TSTAMP;
+
+            if (!luogoMarkers[luogoId]) {
+              luogoMarkers[luogoId] = {
+                latSum: 0,
+                lonSum: 0,
+                count: 0,
+                name: luogoNome,
+                tMin: null,
+                tMax: null
+              };
+            }
+            const info = luogoMarkers[luogoId];
+            info.latSum += lat;
+            info.lonSum += lon;
+            info.count += 1;
+
+            if (tstampVal) {
+              if (!info.tMin || tstampVal < info.tMin) info.tMin = tstampVal;
+              if (!info.tMax || tstampVal > info.tMax) info.tMax = tstampVal;
             }
           });
 
-          if (latlngs.length > 0) {
-            const poly = L.polyline(latlngs, { weight: 4 });
+          // Centroidi dei luoghi
+          const placeCenters = [];
+          Object.entries(luogoMarkers).forEach(([id, info]) => {
+            if (!info.count) return;
+            const avgLat = info.latSum / info.count;
+            const avgLon = info.lonSum / info.count;
+            const name = info.name;
+            placeCenters.push({ id, lat: avgLat, lon: avgLon, name });
+          });
+
+          // Seconda passata: costruisci il percorso (con timestamp per tooltip)
+          const pathLatLngs = [];
+          const pathPoints   = [];   // {lat, lon, tstamp}
+          let lastPoint = null;
+
+          rows.forEach(row => {
+            const rawLat = row.lat ?? row.LAT ?? row.Lat;
+            const rawLon = row.lon ?? row.LON ?? row.Lon;
+            if (rawLat == null || rawLon == null) return;
+
+            let lat = parseFloat(rawLat);
+            let lon = parseFloat(rawLon);
+            if (isNaN(lat) || isNaN(lon)) return;
+
+            const luogoId = row.luogo_id ?? row.luogoID ?? row.luogo;
+            const tstampVal = row.tstamp ?? row.ts ?? row.TSTAMP;
+
+            if (luogoId != null) {
+              // Punti associati a un luogo: usa sempre il centro del luogo
+              const center = placeCenters.find(c => String(c.id) === String(luogoId));
+              if (center) {
+                lat = center.lat;
+                lon = center.lon;
+              }
+            } else {
+              // Punti "liberi": se troppo vicini a un luogo, scartali (rumore vicino agli edifici)
+              const nearPlace = placeCenters.some(c =>
+                distanceMeters(lat, lon, c.lat, c.lon) < NEAR_PLACE_RADIUS_M
+              );
+              if (nearPlace) return;
+            }
+
+            // Evita punti consecutivi quasi identici
+            if (lastPoint) {
+              const d = distanceMeters(lastPoint.lat, lastPoint.lon, lat, lon);
+              if (d < MIN_STEP_M) {
+                return;
+              }
+            }
+
+            pathLatLngs.push([lat, lon]);
+            pathPoints.push({ lat, lon, tstamp: tstampVal });
+            lastPoint = { lat, lon };
+          });
+
+          // Disegna polyline se ci sono almeno due punti
+          if (pathLatLngs.length > 1) {
+            const poly = L.polyline(pathLatLngs, { weight: 4 });
             poly.addTo(map);
-            map.fitBounds(poly.getBounds(), { padding: [20, 20] });
+          }
+
+          // Tooltip sui punti del percorso (cerchietti piccoli)
+          pathPoints.forEach(p => {
+            if (!p.tstamp) return;
+            const marker = L.circleMarker([p.lat, p.lon], { radius: 3 });
+            marker.addTo(map).bindTooltip(formatTimestamp(p.tstamp), {
+              direction: "top"
+            });
+          });
+
+          // Marker per i luoghi, con range timestamp
+          placeCenters.forEach(c => {
+            const info = luogoMarkers[c.id];
+            let rangeText = "";
+            if (info && info.tMin && info.tMax) {
+              if (info.tMin === info.tMax) {
+                rangeText = formatTimestamp(info.tMin);
+              } else {
+                rangeText = formatTimestamp(info.tMin) + " – " + formatTimestamp(info.tMax);
+              }
+            }
+            const lines = [];
+            lines.push((c.name || "luogo") + " (#" + c.id + ")");
+            if (rangeText) lines.push(rangeText);
+            const title = lines.join("\n");
+
+            const m = L.marker([c.lat, c.lon]);
+            m.addTo(map).bindTooltip(title, {
+              direction: "top"
+            });
+            markerLatLngs.push([c.lat, c.lon]);
+          });
+
+          const allLatLngs = pathLatLngs.concat(markerLatLngs);
+
+          if (allLatLngs.length > 0) {
+            const bounds = L.latLngBounds(allLatLngs);
+            map.fitBounds(bounds, { padding: [20, 20] });
           } else {
             map.setView([0, 0], 2);
           }
