@@ -1,4 +1,4 @@
-<!-- v12 -->
+<!-- v16 -->
 {% extends "base.html" %}
 
 {% block title %}Percorso GPS{% endblock %}
@@ -25,31 +25,15 @@
     }
     #gps-map {
       width: 100%;
-      height: 400px;
+      height: 500px;
       margin: 1rem 0;
       border: 1px solid #ccc;
       border-radius: 4px;
       background: #f9f9f9;
     }
-    table.gps-table {
-      border-collapse: collapse;
-      width: 100%;
-    }
-    table.gps-table th,
-    table.gps-table td {
-      border: 1px solid #ddd;
-      padding: 4px 6px;
-      text-align: left;
-      font-size: 0.9rem;
-      white-space: nowrap;
-    }
-    table.gps-table th {
-      background: #f5f5f5;
-      font-weight: 600;
-    }
   </style>
 
-  <!-- Leaflet da CDN, senza integrity/crossorigin -->
+  <!-- Leaflet CDN -->
   <link
     rel="stylesheet"
     href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
@@ -63,30 +47,22 @@
   <h1>Percorso GPS</h1>
 
   <div class="gps-toolbar">
-    <form method="get" action="">
+    <form method="get">
       <div style="display:flex; flex-wrap:wrap; gap:0.5rem; align-items:center;">
         <div>
           <label for="start-input">Da</label>
-          <input
-            id="start-input"
-            name="start"
-            type="datetime-local"
-            value="{{ request.args.start|default('', true) }}"
-          />
+          <input id="start-input" name="start" type="datetime-local"
+            value="{{ request.args.start|default('', true) }}" />
         </div>
+
         <div>
           <label for="end-input">A</label>
-          <input
-            id="end-input"
-            name="end"
-            type="datetime-local"
-            value="{{ request.args.end|default('', true) }}"
-          />
+          <input id="end-input" name="end" type="datetime-local"
+            value="{{ request.args.end|default('', true) }}" />
         </div>
-        <div>
-          <button type="submit">Applica</button>
-          <button type="button" id="gps-clear">Pulisci</button>
-        </div>
+
+        <button type="submit">Applica</button>
+        <button type="button" id="gps-clear">Pulisci</button>
       </div>
 
       <div class="gps-quick-buttons" style="margin-top:0.5rem;">
@@ -98,50 +74,39 @@
     </form>
   </div>
 
+  <!-- SOLO MAPPA – NESSUNA TABELLA -->
   <div id="gps-map"></div>
-
-  {% if rows and columns %}
-    <table class="gps-table">
-      <thead>
-        <tr>
-          {% for column in columns %}
-            <th>{{ column.name }}</th>
-          {% endfor %}
-        </tr>
-      </thead>
-      <tbody>
-        {% for row in rows %}
-          <tr>
-            {% for column in columns %}
-              <td>{{ row[column.name] }}</td>
-            {% endfor %}
-          </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  {% else %}
-    <p>Nessun risultato per l’intervallo selezionato.</p>
-  {% endif %}
 
   <script>
     (function() {
+
       function toLocalIso(dt) {
-        const pad = n => String(n).padStart(2, "0");
-        return (
-          dt.getFullYear() +
-          "-" + pad(dt.getMonth() + 1) +
-          "-" + pad(dt.getDate()) +
-          "T" + pad(dt.getHours()) +
-          ":" + pad(dt.getMinutes()) +
-          ":" + pad(dt.getSeconds())
-        );
+        const pad = (n) => String(n).padStart(2, "0");
+        return dt.getFullYear() + "-" + pad(dt.getMonth() + 1) + "-" + pad(dt.getDate())
+             + "T" + pad(dt.getHours()) + ":" + pad(dt.getMinutes()) + ":" + pad(dt.getSeconds());
       }
 
       function formatTimestamp(ts) {
         if (!ts) return "";
-        // da "2025-11-29T08:33:26+01:00" a "2025-11-29 08:33"
-        const clean = ts.split("+")[0].split("Z")[0]; // togli timezone/z
+        const clean = ts.split("+")[0].split("Z")[0];
         return clean.replace("T", " ").slice(0, 16);
+      }
+
+      // Per i marker dei luoghi: split data/ora
+      function splitDateTime(ts) {
+        const clean = ts.split("+")[0].split("Z")[0];
+        const [date, time] = clean.split("T");
+        const [year, month, day] = date.split("-");
+        const [hour, minute] = time.split(":");
+        return { date, year, month, day, hour, minute };
+      }
+
+      function formatDateShort(parts) {
+        return parts.day + "-" + parts.month + "-" + parts.year.slice(2);
+      }
+
+      function formatTimeShort(parts) {
+        return parts.hour + ":" + parts.minute;
       }
 
       const startInput = document.getElementById("start-input");
@@ -150,33 +115,28 @@
       const quickButtons = document.querySelectorAll(".gps-quick-buttons button");
       const mapDiv = document.getElementById("gps-map");
 
-      clearBtn.addEventListener("click", function() {
+      clearBtn.addEventListener("click", () => {
         startInput.value = "";
         endInput.value = "";
       });
 
-      quickButtons.forEach(btn => {
-        btn.addEventListener("click", function() {
+      quickButtons.forEach((btn) => {
+        btn.addEventListener("click", function () {
           const now = new Date();
           let start, end;
 
-          switch (btn.dataset.range) {
-            case "today":
-              start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
-              end = now;
-              break;
-            case "yesterday":
-              start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1, 0, 0, 0);
-              end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
-              break;
-            case "last24":
-              end = now;
-              start = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-              break;
-            case "last7":
-              end = now;
-              start = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-              break;
+          if (this.dataset.range === "today") {
+            start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+            end = now;
+          } else if (this.dataset.range === "yesterday") {
+            start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1, 0, 0, 0);
+            end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+          } else if (this.dataset.range === "last24") {
+            end = now;
+            start = new Date(now.getTime() - 24 * 3600 * 1000);
+          } else if (this.dataset.range === "last7") {
+            end = now;
+            start = new Date(now.getTime() - 7 * 24 * 3600 * 1000);
           }
 
           startInput.value = toLocalIso(start);
@@ -185,198 +145,163 @@
         });
       });
 
-      // --- MAPPA ---
       if (typeof L === "undefined") {
-        if (mapDiv) {
-          mapDiv.innerHTML =
-            "<p style='padding:1rem;'>Impossibile caricare la mappa: Leaflet non è disponibile (script CDN bloccato?).</p>";
-        }
+        mapDiv.innerHTML = "<p>Leaflet non disponibile</p>";
         return;
       }
 
       const map = L.map("gps-map");
-      const osm = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
         maxZoom: 19,
-        attribution: "&copy; OpenStreetMap contributors"
-      });
-      osm.addTo(map);
+        attribution: "&copy; OpenStreetMap contributors",
+      }).addTo(map);
 
-      // URL JSON: stessa query, ma endpoint .json e _shape=array
       const jsonUrl = new URL(window.location.href);
-      jsonUrl.pathname = jsonUrl.pathname + ".json";
+      jsonUrl.pathname += ".json";
       jsonUrl.searchParams.set("_shape", "array");
       jsonUrl.searchParams.set("_size", "max");
 
       function deg2rad(d) { return d * Math.PI / 180; }
-      function distanceMeters(lat1, lon1, lat2, lon2) {
-        const R = 6371000; // raggio Terra
+      function distM(lat1, lon1, lat2, lon2) {
+        const R = 6371000;
         const dLat = deg2rad(lat2 - lat1);
         const dLon = deg2rad(lon2 - lon1);
-        const a =
-          Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-          Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
-          Math.sin(dLon / 2) * Math.sin(dLon / 2);
-        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        return R * c;
+        const a = Math.sin(dLat/2)**2 +
+                  Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
+                  Math.sin(dLon/2)**2;
+        return 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
       }
 
-      const NEAR_PLACE_RADIUS_M = 40; // punti liberi troppo vicini a un luogo vengono scartati
-      const MIN_STEP_M = 5;          // distanza minima tra due punti consecutivi nel percorso
+      const NEAR_PLACE_RADIUS_M = 40;
+      const MIN_STEP_M = 5;
 
       fetch(jsonUrl.toString())
         .then(r => r.json())
-        .then(data => {
-          const rows = Array.isArray(data) ? data : [];
+        .then(rows => {
+          const luogo = {};  // centroidi + range tstamp
+          const path = [];
+          const pathPts = [];
+          const markerLatLngs = [];
+          let last = null;
 
-          const luogoMarkers = {};   // per centroidi + range timestamp
-          const markerLatLngs = [];  // per fitBounds
-
-          // Prima passata: accumula i luoghi (centro + tstamp min/max)
-          rows.forEach(row => {
-            const latVal = row.lat ?? row.LAT ?? row.Lat;
-            const lonVal = row.lon ?? row.LON ?? row.Lon;
-            if (latVal == null || lonVal == null) return;
-
-            const lat = parseFloat(latVal);
-            const lon = parseFloat(lonVal);
-            if (isNaN(lat) || isNaN(lon)) return;
-
-            const luogoId = row.luogo_id ?? row.luogoID ?? row.luogo;
-            if (luogoId == null) return;
-
-            const luogoNome = row.luogo_nome ?? row.luogoName ?? row.indirizzo;
-            const tstampVal = row.tstamp ?? row.ts ?? row.TSTAMP;
-
-            if (!luogoMarkers[luogoId]) {
-              luogoMarkers[luogoId] = {
-                latSum: 0,
-                lonSum: 0,
-                count: 0,
-                name: luogoNome,
-                tMin: null,
-                tMax: null
+          // 1) raccogli tutte le info luogo
+          rows.forEach(r => {
+            if (!r.luogo_id) return;
+            const la = parseFloat(r.lat);
+            const lo = parseFloat(r.lon);
+            if (isNaN(la) || isNaN(lo)) return;
+            const id = r.luogo_id;
+            if (!luogo[id]) {
+              luogo[id] = {
+                latSum: 0, lonSum: 0, count: 0,
+                name: r.luogo_nome,
+                tMin: r.tstamp, tMax: r.tstamp
               };
             }
-            const info = luogoMarkers[luogoId];
-            info.latSum += lat;
-            info.lonSum += lon;
-            info.count += 1;
-
-            if (tstampVal) {
-              if (!info.tMin || tstampVal < info.tMin) info.tMin = tstampVal;
-              if (!info.tMax || tstampVal > info.tMax) info.tMax = tstampVal;
-            }
+            const Lg = luogo[id];
+            Lg.latSum += la; Lg.lonSum += lo; Lg.count++;
+            if (r.tstamp < Lg.tMin) Lg.tMin = r.tstamp;
+            if (r.tstamp > Lg.tMax) Lg.tMax = r.tstamp;
           });
 
-          // Centroidi dei luoghi
-          const placeCenters = [];
-          Object.entries(luogoMarkers).forEach(([id, info]) => {
-            if (!info.count) return;
-            const avgLat = info.latSum / info.count;
-            const avgLon = info.lonSum / info.count;
-            const name = info.name;
-            placeCenters.push({ id, lat: avgLat, lon: avgLon, name });
-          });
+          // centroidi
+          const centers = Object.entries(luogo).map(([id, info]) => ({
+            id,
+            lat: info.latSum / info.count,
+            lon: info.lonSum / info.count,
+            name: info.name,
+            tMin: info.tMin,
+            tMax: info.tMax
+          }));
 
-          // Seconda passata: costruisci il percorso (con timestamp per tooltip)
-          const pathLatLngs = [];
-          const pathPoints   = [];   // {lat, lon, tstamp}
-          let lastPoint = null;
-
-          rows.forEach(row => {
-            const rawLat = row.lat ?? row.LAT ?? row.Lat;
-            const rawLon = row.lon ?? row.LON ?? row.Lon;
-            if (rawLat == null || rawLon == null) return;
-
-            let lat = parseFloat(rawLat);
-            let lon = parseFloat(rawLon);
+          // 2) ricostruisci il percorso
+          rows.forEach(r => {
+            let lat = parseFloat(r.lat);
+            let lon = parseFloat(r.lon);
             if (isNaN(lat) || isNaN(lon)) return;
 
-            const luogoId = row.luogo_id ?? row.luogoID ?? row.luogo;
-            const tstampVal = row.tstamp ?? row.ts ?? row.TSTAMP;
+            const luogoId = r.luogo_id;
 
-            if (luogoId != null) {
-              // Punti associati a un luogo: usa sempre il centro del luogo
-              const center = placeCenters.find(c => String(c.id) === String(luogoId));
-              if (center) {
-                lat = center.lat;
-                lon = center.lon;
-              }
+            if (luogoId) {
+              const c = centers.find(c => c.id == luogoId);
+              if (c) { lat = c.lat; lon = c.lon; }
             } else {
-              // Punti "liberi": se troppo vicini a un luogo, scartali (rumore vicino agli edifici)
-              const nearPlace = placeCenters.some(c =>
-                distanceMeters(lat, lon, c.lat, c.lon) < NEAR_PLACE_RADIUS_M
+              const near = centers.some(c =>
+                distM(lat, lon, c.lat, c.lon) < NEAR_PLACE_RADIUS_M
               );
-              if (nearPlace) return;
+              if (near) return;
             }
 
-            // Evita punti consecutivi quasi identici
-            if (lastPoint) {
-              const d = distanceMeters(lastPoint.lat, lastPoint.lon, lat, lon);
-              if (d < MIN_STEP_M) {
-                return;
-              }
+            if (last) {
+              if (distM(last.lat, last.lon, lat, lon) < MIN_STEP_M) return;
             }
 
-            pathLatLngs.push([lat, lon]);
-            pathPoints.push({ lat, lon, tstamp: tstampVal });
-            lastPoint = { lat, lon };
+            path.push([lat, lon]);
+            pathPts.push({lat, lon, t: r.tstamp});
+            last = {lat, lon};
           });
 
-          // Disegna polyline se ci sono almeno due punti
-          if (pathLatLngs.length > 1) {
-            const poly = L.polyline(pathLatLngs, { weight: 4 });
-            poly.addTo(map);
+          // linee
+          if (path.length > 1) {
+            L.polyline(path, {weight:4}).addTo(map);
           }
 
-          // Tooltip sui punti del percorso (cerchietti piccoli)
-          pathPoints.forEach(p => {
-            if (!p.tstamp) return;
-            const marker = L.circleMarker([p.lat, p.lon], { radius: 3 });
-            marker.addTo(map).bindTooltip(formatTimestamp(p.tstamp), {
-              direction: "top"
-            });
+          // tooltip sui punti della traccia
+          pathPts.forEach(p => {
+            if (!p.t) return;
+            L.circleMarker([p.lat, p.lon], {radius:3})
+              .addTo(map)
+              .bindTooltip(formatTimestamp(p.t), {direction:"top"});
           });
 
-          // Marker per i luoghi, con range timestamp
-          placeCenters.forEach(c => {
-            const info = luogoMarkers[c.id];
-            let rangeText = "";
-            if (info && info.tMin && info.tMax) {
-              if (info.tMin === info.tMax) {
-                rangeText = formatTimestamp(info.tMin);
-              } else {
-                rangeText = formatTimestamp(info.tMin) + " – " + formatTimestamp(info.tMax);
-              }
-            }
+          // marker luoghi con NUOVO formato tooltip + <br>
+          centers.forEach(c => {
             const lines = [];
             lines.push((c.name || "luogo") + " (#" + c.id + ")");
-            if (rangeText) lines.push(rangeText);
-            const title = lines.join("\n");
+
+            if (c.tMin && c.tMax) {
+              const s = splitDateTime(c.tMin);
+              const e = splitDateTime(c.tMax);
+
+              if (s.date === e.date) {
+                // stessa data:
+                // 29-11-25
+                // 07:56 - 08:01
+                const dateLine = formatDateShort(s);
+                const timeLine = formatTimeShort(s) + " - " + formatTimeShort(e);
+                lines.push(dateLine);
+                lines.push(timeLine);
+              } else {
+                // date diverse:
+                // 29-11-25, 07:56
+                // 30-11-25, 11:42
+                const first = formatDateShort(s) + ", " + formatTimeShort(s);
+                const second = formatDateShort(e) + ", " + formatTimeShort(e);
+                lines.push(first);
+                lines.push(second);
+              }
+            } else if (c.tMin) {
+              const s = splitDateTime(c.tMin);
+              lines.push(formatDateShort(s));
+              lines.push(formatTimeShort(s));
+            }
+
+            const html = lines.join("<br>");
 
             const m = L.marker([c.lat, c.lon]);
-            m.addTo(map).bindTooltip(title, {
+            m.addTo(map).bindTooltip(html, {
               direction: "top"
             });
+            m.on("click", () => window.open("/output/luogo/" + c.id, "_blank"));
             markerLatLngs.push([c.lat, c.lon]);
           });
 
-          const allLatLngs = pathLatLngs.concat(markerLatLngs);
-
-          if (allLatLngs.length > 0) {
-            const bounds = L.latLngBounds(allLatLngs);
-            map.fitBounds(bounds, { padding: [20, 20] });
+          const all = path.concat(markerLatLngs);
+          if (all.length > 0) {
+            map.fitBounds(L.latLngBounds(all), {padding:[20,20]});
           } else {
-            map.setView([0, 0], 2);
+            map.setView([0,0], 2);
           }
-        })
-        .catch(err => {
-          console.error("Errore nel caricare i dati GPS:", err);
-          if (mapDiv) {
-            mapDiv.innerHTML =
-              "<p style='padding:1rem;'>Errore nel caricare i dati GPS per la mappa (vedi console browser).</p>";
-          }
-          map.setView([0, 0], 2);
         });
     })();
   </script>

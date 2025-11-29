@@ -1,6 +1,6 @@
 sex: id, inizio, fine, partner_id, sesh_id, orgia_id, interrotto_id,voto, luogo_id, logseq_id, dove_sborra_id, come_viene_id,  cruising_id, link, logseq, logseq_bool, creato, edit
 calendar_range:inizio, tab, col, link, luogo_id
 partner: id
-luogo: maps, indirizzo
+luogo: maps, indirizzo,id, appartamento, campanello, hotel, lat, lon, quartiere, cap, municipality, place_type, building_type,logseq, logseq_bool,creato, edit
 interrotto: id
 positions: id, tstamp, device, lat, lon, luogo_id, luogo_nome
