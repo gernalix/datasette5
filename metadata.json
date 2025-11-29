@@ -1,3 +1,17 @@
 {
-  "title": "Dashboard"
+  "title": "Dashboard",
+  "databases": {
+    "output": {
+      "queries": {
+        "gps_route": {
+          "title": "Percorso GPS",
+          "sql": "SELECT\n  p.id,\n  p.tstamp,\n  p.device,\n  p.lat,\n  p.lon,\n  p.luogo_id,\n  l.indirizzo AS luogo_nome\nFROM positions AS p\nLEFT JOIN luogo AS l ON p.luogo_id = l.id\nWHERE p.tstamp BETWEEN :start AND :end\nORDER BY p.tstamp",
+          "params": [
+            "start",
+            "end"
+          ]
+        }
+      }
+    }
+  }
 }

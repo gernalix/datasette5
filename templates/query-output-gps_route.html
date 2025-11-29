@@ -1,0 +1,240 @@
+<!-- v7 -->
+{% extends "base.html" %}
+
+{% block title %}Percorso GPS{% endblock %}
+
+{% block extra_head %}
+  {{ super() }}
+  <style>
+    .gps-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+    .gps-toolbar label {
+      margin-right: 0.25rem;
+    }
+    .gps-toolbar input[type="datetime-local"] {
+      padding: 0.25rem 0.4rem;
+    }
+    .gps-quick-buttons button {
+      margin-right: 0.25rem;
+      margin-top: 0.25rem;
+    }
+    #gps-map {
+      width: 100%;
+      height: 400px;
+      margin: 1rem 0;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      background: #f9f9f9;
+    }
+    table.gps-table {
+      border-collapse: collapse;
+      width: 100%;
+    }
+    table.gps-table th,
+    table.gps-table td {
+      border: 1px solid #ddd;
+      padding: 4px 6px;
+      text-align: left;
+      font-size: 0.9rem;
+      white-space: nowrap;
+    }
+    table.gps-table th {
+      background: #f5f5f5;
+      font-weight: 600;
+    }
+  </style>
+
+  <!-- Leaflet da CDN, senza integrity/crossorigin -->
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  />
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js">
+  </script>
+{% endblock %}
+
+{% block content %}
+  <h1>Percorso GPS</h1>
+
+  <div class="gps-toolbar">
+    <form method="get" action="">
+      <div style="display:flex; flex-wrap:wrap; gap:0.5rem; align-items:center;">
+        <div>
+          <label for="start-input">Da</label>
+          <input
+            id="start-input"
+            name="start"
+            type="datetime-local"
+            value="{{ request.args.start|default('', true) }}"
+          />
+        </div>
+        <div>
+          <label for="end-input">A</label>
+          <input
+            id="end-input"
+            name="end"
+            type="datetime-local"
+            value="{{ request.args.end|default('', true) }}"
+          />
+        </div>
+        <div>
+          <button type="submit">Applica</button>
+          <button type="button" id="gps-clear">Pulisci</button>
+        </div>
+      </div>
+
+      <div class="gps-quick-buttons" style="margin-top:0.5rem;">
+        <button type="button" data-range="today">Oggi</button>
+        <button type="button" data-range="yesterday">Ieri</button>
+        <button type="button" data-range="last24">Ultime 24h</button>
+        <button type="button" data-range="last7">Ultima settimana</button>
+      </div>
+    </form>
+  </div>
+
+  <div id="gps-map"></div>
+
+  {% if rows and columns %}
+    <table class="gps-table">
+      <thead>
+        <tr>
+          {% for column in columns %}
+            <th>{{ column.name }}</th>
+          {% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+          <tr>
+            {% for column in columns %}
+              <td>{{ row[column.name] }}</td>
+            {% endfor %}
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p>Nessun risultato per l’intervallo selezionato.</p>
+  {% endif %}
+
+  <script>
+    (function() {
+      function toLocalIso(dt) {
+        const pad = n => String(n).padStart(2, "0");
+        return (
+          dt.getFullYear() +
+          "-" + pad(dt.getMonth() + 1) +
+          "-" + pad(dt.getDate()) +
+          "T" + pad(dt.getHours()) +
+          ":" + pad(dt.getMinutes()) +
+          ":" + pad(dt.getSeconds())
+        );
+      }
+
+      const startInput = document.getElementById("start-input");
+      const endInput = document.getElementById("end-input");
+      const clearBtn = document.getElementById("gps-clear");
+      const quickButtons = document.querySelectorAll(".gps-quick-buttons button");
+      const mapDiv = document.getElementById("gps-map");
+
+      clearBtn.addEventListener("click", function() {
+        startInput.value = "";
+        endInput.value = "";
+      });
+
+      quickButtons.forEach(btn => {
+        btn.addEventListener("click", function() {
+          const now = new Date();
+          let start, end;
+
+          switch (btn.dataset.range) {
+            case "today":
+              start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+              end = now;
+              break;
+            case "yesterday":
+              start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1, 0, 0, 0);
+              end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+              break;
+            case "last24":
+              end = now;
+              start = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+              break;
+            case "last7":
+              end = now;
+              start = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+              break;
+          }
+
+          startInput.value = toLocalIso(start);
+          endInput.value = toLocalIso(end);
+          startInput.form.submit();
+        });
+      });
+
+      // --- MAPPA ---
+      if (typeof L === "undefined") {
+        if (mapDiv) {
+          mapDiv.innerHTML =
+            "<p style='padding:1rem;'>Impossibile caricare la mappa: Leaflet non è disponibile (script CDN bloccato?).</p>";
+        }
+        return;
+      }
+
+      const map = L.map("gps-map");
+      const osm = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        maxZoom: 19,
+        attribution: "&copy; OpenStreetMap contributors"
+      });
+      osm.addTo(map);
+
+      // URL JSON: stessa query, ma endpoint .json e _shape=array
+      const jsonUrl = new URL(window.location.href);
+      jsonUrl.pathname = jsonUrl.pathname + ".json";
+      jsonUrl.searchParams.set("_shape", "array");
+      jsonUrl.searchParams.set("_size", "max");
+
+      fetch(jsonUrl.toString())
+        .then(r => r.json())
+        .then(data => {
+          // con _shape=array data è direttamente una lista di oggetti
+          const rows = Array.isArray(data) ? data : [];
+
+          const latlngs = [];
+          rows.forEach(row => {
+            const latVal = row.lat ?? row.LAT ?? row.Lat;
+            const lonVal = row.lon ?? row.LON ?? row.Lon;
+            if (latVal != null && lonVal != null) {
+              const lat = parseFloat(latVal);
+              const lon = parseFloat(lonVal);
+              if (!isNaN(lat) && !isNaN(lon)) {
+                latlngs.push([lat, lon]);
+              }
+            }
+          });
+
+          if (latlngs.length > 0) {
+            const poly = L.polyline(latlngs, { weight: 4 });
+            poly.addTo(map);
+            map.fitBounds(poly.getBounds(), { padding: [20, 20] });
+          } else {
+            map.setView([0, 0], 2);
+          }
+        })
+        .catch(err => {
+          console.error("Errore nel caricare i dati GPS:", err);
+          if (mapDiv) {
+            mapDiv.innerHTML =
+              "<p style='padding:1rem;'>Errore nel caricare i dati GPS per la mappa (vedi console browser).</p>";
+          }
+          map.setView([0, 0], 2);
+        });
+    })();
+  </script>
+{% endblock %}

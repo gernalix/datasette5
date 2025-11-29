@@ -3,3 +3,4 @@ calendar_range:inizio, tab, col, link, luogo_id
 partner: id
 luogo: maps, indirizzo
 interrotto: id
+positions: id, tstamp, device, lat, lon, luogo_id, luogo_nome
