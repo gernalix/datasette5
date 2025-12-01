@@ -87,7 +87,9 @@ function Start-DS {
         '--setting','base_url','/',
         '--template-dir', $templates,
         '--static',       $staticCus,
-        '--metadata',     $metadata
+        '--metadata',     $metadata,
+		'--setting','max_returned_rows','20000'
+
     )
 
     # === PLUGIN DIR =====================================================
