@@ -1,6 +1,33 @@
-sex: id, inizio, fine, partner_id, sesh_id, orgia_id, interrotto_id,voto, luogo_id, logseq_id, dove_sborra_id, come_viene_id,  cruising_id, link, logseq, logseq_bool, creato, edit
-calendar_range:inizio, tab, col, link, luogo_id
-partner: id
-luogo: maps, indirizzo,id, appartamento, campanello, hotel, lat, lon, quartiere, cap, municipality, place_type, building_type,logseq, logseq_bool,creato, edit
-interrotto: id
-positions: id, tstamp, device, lat, lon, luogo_id, luogo_nome
+# Auto-generated from memento_all_csv.zip: list of columns that must NOT be treated as boolean (checkbox).
+# One line per table: table_name: col1, col2, ...
+G: quantità, quando
+ascensore rotto: quando
+barbiere: quando, note
+cacca: tempo, come, passate
+craving: craving, data, note
+douching: inizio, fine
+ducray: ora
+forza: voto, quando
+idratante: quando
+lavatrice: quando
+libido: libido, quando, note
+location: descrizione, luogo, ora, logseq id, indirizzo, distanza da casa
+overdose T: data, sintomi
+pant: dove, quando, soldi
+parole inesistenti: parola, data
+parole: parola, data
+pento di droghe: quando
+perdo: cosa, quando
+pressione: alta, bassa, quando
+rado barba: data
+riscaldamento: inizio, fine, livello
+rubo: cosa, dove, quando
+sega: quando
+sfide: sfida, durata, quando, tentativi, difficoltà
+sogni: cosa, quando, buono/cattivo
+t puff: quando
+t rimasta: quantità, quando, busta
+taglio unghie: quando
+tempo perc.: percepito, reale, ratio, quando, tipo
+trovo: cosa, quando
+umore: umore, tempo, note

@@ -1,6 +1,6 @@
-# plugins/memento_ui.py
+# v7
 # -*- coding: utf-8 -*-
-# v5 - Fix CSRF + add real date/datetime pickers via templates (like /sex/insert)
+# v7 - Add per-table non-boolean column overrides (loaded from not_booleans.txt)
 
 import os
 import csv
@@ -17,6 +17,54 @@ from datasette.utils.asgi import Response
 BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 CSV_DIR = os.path.join(BASE_DIR, "memento_csvs")
 DB_PATH = None  # resolved at runtime from the default Datasette database
+
+# ---- overrides: columns that must NOT be treated as booleans ------------------
+
+_NON_BOOL_CACHE = None
+
+def _load_non_boolean_overrides() -> dict:
+    """Parse BASE_DIR/not_booleans.txt.
+
+    Format (one per line):
+        table_name: col1, col2, col3
+
+    Returns:
+        {table_name_lower: {colname_lower, ...}, ...}
+    """
+    global _NON_BOOL_CACHE
+    if _NON_BOOL_CACHE is not None:
+        return _NON_BOOL_CACHE
+
+    path = os.path.join(BASE_DIR, "not_booleans.txt")
+    overrides: dict = {}
+    if os.path.isfile(path):
+        with open(path, "r", encoding="utf-8") as f:
+            for raw in f:
+                line = raw.strip()
+                if not line or line.startswith("#"):
+                    continue
+                if ":" not in line:
+                    continue
+                t, cols = line.split(":", 1)
+                t = t.strip().lower()
+                if not t:
+                    continue
+                colset = overrides.setdefault(t, set())
+                for c in cols.split(","):
+                    cc = c.strip()
+                    if cc:
+                        colset.add(cc.lower())
+
+    _NON_BOOL_CACHE = overrides
+    return overrides
+
+def _is_forced_non_boolean(table_name: str, colname: str) -> bool:
+    if not table_name or not colname:
+        return False
+    ov = _load_non_boolean_overrides()
+    tn = table_name.strip().lower()
+    cn = colname.strip().lower()
+    return (tn in ov) and (cn in ov[tn])
 
 # ---- util: quoting identifiers ------------------------------------------------
 
@@ -138,7 +186,7 @@ def _guess_widget_from_name(colname: str):
         return ("date", "date")
     return None
 
-def infer_schema_from_csv(csv_path: str, sample_rows: int = 200):
+def infer_schema_from_csv(csv_path: str, table_name: str = None, sample_rows: int = 200):
     """
     Returns:
         columns: list of dict: {name, sql_type, widget, subtype}
@@ -198,7 +246,8 @@ def infer_schema_from_csv(csv_path: str, sample_rows: int = 200):
             return (st[k] / n) if n else 0.0
 
         # Decide based on strong ratios
-        if n and ratio("bool_ok") >= 0.95:
+        # If column is explicitly marked as non-boolean, never pick the checkbox widget.
+        if n and ratio("bool_ok") >= 0.95 and not _is_forced_non_boolean(table_name or "", c):
             sql_type = "INTEGER"
             widget = "checkbox"
             subtype = "boolean"
@@ -270,7 +319,7 @@ def table_exists(conn: sqlite3.Connection, table_name: str) -> bool:
     return cur.fetchone() is not None
 
 def import_csv_into_sqlite(conn: sqlite3.Connection, csv_path: str, table_name: str):
-    columns = infer_schema_from_csv(csv_path)
+    columns = infer_schema_from_csv(csv_path, table_name=table_name)
 
     # create table
     cols_sql = ", ".join([f"{_q(c['name'])} {c['sql_type']}" for c in columns])
@@ -408,6 +457,21 @@ async def _get_column_meta(datasette, table_name: str):
         w = meta_map.get(name, {}).get("widget") or "text"
         st = meta_map.get(name, {}).get("subtype")
 
+        # Hard override: some columns are known to be NOT boolean, even if
+        # values look like 0/1. In that case, never render as checkbox.
+        if _is_forced_non_boolean(table_name, name) and w == "checkbox":
+            if "INT" in col_type or col_type == "INTEGER":
+                w, st = "number", "integer"
+            elif "REAL" in col_type or "FLOA" in col_type or "DOUB" in col_type:
+                w, st = "number", "float"
+            else:
+                # still allow name-based date/datetime inference
+                g = _guess_widget_from_name(name)
+                if g:
+                    w, st = g
+                else:
+                    w, st = "text", "text"
+
         # If widget unknown/plain text, try to autodetect from existing data (and column name)
         if w in (None, "", "text"):
             # 1) name heuristic
@@ -430,7 +494,7 @@ async def _get_column_meta(datasette, table_name: str):
                         w, st = "date", "date"
                     elif any(_try_parse_duration_hhmm(v) is not None for v in vals):
                         w, st = "duration_hhmm", "duration_hhmm"
-                    elif any(_try_parse_bool(v) is not None for v in vals):
+                    elif (not _is_forced_non_boolean(table_name, name)) and any(_try_parse_bool(v) is not None for v in vals):
                         w, st = "checkbox", "boolean"
                 except Exception:
                     pass
