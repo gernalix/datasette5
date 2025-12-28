@@ -16,6 +16,9 @@
   const NULL_TOKENS  = new Set(["", "null", "none", "nan", "undefined"]);
   const ISO_LIKE_RE  = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})/i;
 
+  // Colonne UI/sistema di Datasette che non devono MAI diventare booleane
+  const ALWAYS_SKIP_COLS = new Set(["link", "rowid"]);
+
   // Carica esclusioni da /custom/not_booleans.txt (supporta 2 formati)
   async function loadNotBooleans(){
     try{
@@ -45,15 +48,17 @@
   }
 
   function currentTableName(){
-    try{
-      const h = document.querySelector("h1");
-      if(!h) return null;
-      const small = h.querySelector("small");
-      const raw = small ? small.textContent : h.textContent;
-      if(!raw) return null;
-      const m = raw.match(/Table:\s*([A-Za-z0-9_]+)/i) || raw.match(/^\s*([A-Za-z0-9_]+)\s*$/);
-      return m ? m[1].toLowerCase() : null;
-    }catch(_){ return null; }
+    // Robusto: usa l'URL (supporta spazi -> '+')
+    try {
+      const parts = location.pathname.split("/").filter(Boolean);
+      const i = parts.indexOf("output");
+      if (i >= 0 && i + 1 < parts.length) {
+        return decodeURIComponent((parts[i+1] || "").replace(/\+/g, " ")).toLowerCase();
+      }
+      return decodeURIComponent((parts[parts.length-1] || "").replace(/\+/g, " ")).toLowerCase();
+    } catch(_){
+      return null;
+    }
   }
 
   function headerNames(table){
@@ -72,13 +77,14 @@
     if(TRUE_TOKENS.has(x))  return "1";
     if(FALSE_TOKENS.has(x)) return "0";
     if(NULL_TOKENS.has(x))  return null;
-    return null; // trattiamo il resto come non-booleano
+    return "__OTHER__"; // qualsiasi altro valore rende la colonna NON booleana
   }
 
   function looksBooleanColumn(values){
     // tutti i valori visibili devono essere in {1,0,null} dopo normalizzazione
     for(const v of values){
       const norm = normalizeToken(v);
+      if(norm === "__OTHER__") return false;
       if(!(norm==="1" || norm==="0" || norm===null)) return false;
     }
     return true;
@@ -106,6 +112,7 @@
     const boolCols = new Set();
     names.forEach((name, i)=>{
       const low = (name||"").toLowerCase();
+      if(ALWAYS_SKIP_COLS.has(low)) return; // mai booleana
       if(excluded.has(low)) return; // esclusa
       if(ISO_LIKE_RE.test(names[i])) return; // mai: protezione inutile, ma safe
       const values = visVals[i];

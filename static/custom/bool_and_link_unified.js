@@ -1,4 +1,4 @@
-// v2
+// v3
 (function () {
   // ===== Robust loader for /-/static/custom/*.txt with fallbacks =====
   async function fetchTextMulti(paths) {
@@ -62,19 +62,22 @@
     return map;
   }
 
-  // Ricava il nome della tabella dall’URL:
-  //   /db/tabella        -> tabella
-  //   /db/tabella/1      -> tabella
-  //   /db/tabella/1/edit -> tabella
+  // Ricava il nome della tabella dall’URL (Datasette):
+  //   /output/<tabella>
+  //   /output/<tabella>/<pk>
+  // Supporta nomi con spazi: Datasette usa '+' nel path.
   function currentTable() {
-    const parts = location.pathname.split("/").filter(Boolean);
-    if (parts.length >= 2) {
-      return decodeURIComponent(parts[1]).toLowerCase();
+    try {
+      const parts = location.pathname.split("/").filter(Boolean);
+      const i = parts.indexOf("output");
+      if (i >= 0 && i + 1 < parts.length) {
+        return decodeURIComponent((parts[i + 1] || "").replace(/\+/g, " ")).toLowerCase();
+      }
+      // fallback
+      return decodeURIComponent((parts[parts.length - 1] || "").replace(/\+/g, " ")).toLowerCase();
+    } catch (e) {
+      return null;
     }
-    if (parts.length === 1) {
-      return decodeURIComponent(parts[0]).toLowerCase();
-    }
-    return null;
   }
 
   function findMainTable() {
@@ -156,9 +159,14 @@
         }
 
         // Colonne BOOLEAN (eccetto quelle in not_booleans)
-        const isNotBool =
-          NOTBOOL[tname] && NOTBOOL[tname].has(colNameLower);
+        // IMPORTANTE: mai toccare colonne UI/sistema di Datasette.
+        if (colNameLower === "link" || colNameLower === "rowid") continue;
+
+        const isNotBool = NOTBOOL[tname] && NOTBOOL[tname].has(colNameLower);
         if (isNotBool) continue;
+
+        // Non convertire celle che contengono HTML (es. link, bottoni ecc.)
+        if (td.querySelector("a, button, input, select, textarea")) continue;
 
         const raw = (td.textContent || "").trim();
         if (raw === "0" || raw === "1") {
