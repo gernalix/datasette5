@@ -1,7 +1,13 @@
 /* AUTO: booleans.js (authority) — not_booleans.txt ONLY */
 (() => {
   const TRUE_TOKENS = new Set(["1","true","t","yes","y","✓","✔","✔️","✅"]);
-  const FALSE_TOKENS = new Set(["0","false","f","no","n","✗","✖","✖️","❌","","null","none","nan"]);
+  // IMPORTANT: do NOT treat empty string as false. Empty cells are common (e.g. Datasette's "Link" column)
+  // and should not be rendered as ❌.
+  const FALSE_TOKENS = new Set(["0","false","f","no","n","✗","✖","✖️","❌","null","none","nan"]);
+
+  // Columns that should never be treated as boolean-renderable.
+  // "Link" and "rowid" are Datasette UI/system columns.
+  const ALWAYS_SKIP_COLS = new Set(["Link", "rowid"]);
 
   function normStr(x) {
     if (x == null) return "";
@@ -13,7 +19,10 @@
     try {
       const p = location.pathname.split("/").filter(Boolean);
       const i = p.indexOf("output");
-      if (i >= 0 && i + 1 < p.length) return decodeURIComponent(p[i+1]);
+      if (i >= 0 && i + 1 < p.length) {
+        // Datasette uses '+' for spaces in table names in the path
+        return decodeURIComponent((p[i+1] || "").replace(/\+/g, " "));
+      }
       return p[p.length-1] || "";
     } catch { return ""; }
   }
@@ -101,7 +110,12 @@
     table.querySelectorAll("tbody tr td").forEach(td => {
       const col = inferColumnNameByIndex(headers, td);
       if (!col) return;
+      if (ALWAYS_SKIP_COLS.has(col)) return;
       if (exclude.has(col)) return; // adhere strictly to file
+
+      // Never override cells that already contain a link or other HTML (prevents breaking Datasette UI columns)
+      if (td.querySelector("a, button, input, select, textarea")) return;
+
       const token = asBoolToken(extractRaw(td));
       if (token === null) return;
       renderBoolCell(td, token);

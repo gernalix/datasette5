@@ -6,7 +6,10 @@
     try {
       const seg = location.pathname.split("/").filter(Boolean);
       const i = seg.indexOf("output");
-      if (i >= 0 && i + 1 < seg.length) return decodeURIComponent(seg[i+1]);
+      if (i >= 0 && i + 1 < seg.length) {
+        // Datasette uses '+' for spaces in table names in the path
+        return decodeURIComponent((seg[i+1] || "").replace(/\+/g, " "));
+      }
       return seg[seg.length-1] || "";
     } catch { return ""; }
   }
@@ -33,11 +36,18 @@
 
   // Format: dd-mm-yy HH:mm (24h)
   function formatDMYHM(iso) {
-    const d = new Date(iso);
+    // If this is a pure date (YYYY-MM-DD) or has no explicit time, show dd-mm-yy.
+    const s = (iso || "").trim();
+    const isDateOnly = /^\d{4}-\d{2}-\d{2}$/.test(s);
+    const hasTimeHint = /[T ]\d{1,2}:\d{2}/.test(s);
+    const d = new Date(s);
     if (isNaN(d.getTime())) return iso; // leave as-is if not parsable
     const dd = String(d.getDate()).padStart(2, "0");
     const mm = String(d.getMonth() + 1).padStart(2, "0");
     const yy = String(d.getFullYear()).slice(-2);
+    if (isDateOnly || !hasTimeHint) {
+      return `${dd}-${mm}-${yy}`;
+    }
     const HH = String(d.getHours()).padStart(2, "0");
     const Min = String(d.getMinutes()).padStart(2, "0");
     return `${dd}-${mm}-${yy} ${HH}:${Min}`;

@@ -6,4 +6,4 @@
 #
 # Examples below cover your current use-cases.
 sex: inizio, fine
-*: *_at, *_timestamp, *_time, *_date, inizio, fine
+*: *_at, *_timestamp, *_time, *_date, inizio, fine, quando, *quando*

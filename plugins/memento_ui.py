@@ -1,6 +1,6 @@
-# v7
+# v8
 # -*- coding: utf-8 -*-
-# v7 - Add per-table non-boolean column overrides (loaded from not_booleans.txt)
+# v8 - Robust CSV type inference (m/d/yy), safer boolean detection, larger samples
 
 import os
 import csv
@@ -83,16 +83,26 @@ _DATE_FORMATS = (
     "%Y-%m-%d",
     "%d/%m/%Y",
     "%Y/%m/%d",
+    "%m/%d/%y",
+    "%m/%d/%Y",
+    "%m-%d-%y",
+    "%m-%d-%Y",
 )
-
 _DATETIME_FORMATS = (
     "%Y-%m-%d %H:%M",
     "%Y-%m-%d %H:%M:%S",
     "%Y-%m-%dT%H:%M",
     "%Y-%m-%dT%H:%M:%S",
     "%Y-%m-%dT%H:%M:%S.%f",
+    "%m/%d/%y %H:%M",
+    "%m/%d/%Y %H:%M",
+    "%m/%d/%y %H:%M:%S",
+    "%m/%d/%Y %H:%M:%S",
+    "%m-%d-%y %H:%M",
+    "%m-%d-%Y %H:%M",
+    "%m-%d-%y %H:%M:%S",
+    "%m-%d-%Y %H:%M:%S",
 )
-
 def _try_parse_bool(s: str):
     x = s.strip().lower()
     if x in _BOOL_TRUE:
@@ -186,7 +196,7 @@ def _guess_widget_from_name(colname: str):
         return ("date", "date")
     return None
 
-def infer_schema_from_csv(csv_path: str, table_name: str = None, sample_rows: int = 200):
+def infer_schema_from_csv(csv_path: str, table_name: str = None, sample_rows: int = 5000):
     """
     Returns:
         columns: list of dict: {name, sql_type, widget, subtype}
@@ -247,7 +257,7 @@ def infer_schema_from_csv(csv_path: str, table_name: str = None, sample_rows: in
 
         # Decide based on strong ratios
         # If column is explicitly marked as non-boolean, never pick the checkbox widget.
-        if n and ratio("bool_ok") >= 0.95 and not _is_forced_non_boolean(table_name or "", c):
+        if n and stats[c]['nonempty'] >= 10 and ratio("bool_ok") >= 0.95 and not _is_forced_non_boolean(table_name or "", c):
             sql_type = "INTEGER"
             widget = "checkbox"
             subtype = "boolean"
