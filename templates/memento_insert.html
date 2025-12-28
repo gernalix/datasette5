@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="content">
+  <h1>Inserisci riga: {{ table }}</h1>
+  <p><a href="{{ table_url }}">← torna alla tabella</a></p>
+
+  {% if message %}
+    <p class="message">{{ message }}</p>
+  {% endif %}
+
+  <form method="POST">
+    <input type="hidden" name="csrftoken" value="{{ csrftoken() }}">
+
+    <style>
+      .m-form-row{border:1px solid #eee;border-radius:10px;padding:12px;margin:10px 0;background:#fff;}
+      .m-form-row label{display:block;font-weight:700;margin-bottom:6px;}
+      .m-form-row .hint{opacity:0.7;font-size:0.85rem;margin-top:6px;}
+      .m-inline{display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
+      .m-inline input[type=number]{width:110px;}
+    </style>
+
+    {% for col in columns %}
+      {% if not col.pk %}
+        <div class="m-form-row">
+          <label for="col_{{ col.name }}">{{ col.name }}</label>
+
+          {% if col.widget == "checkbox" %}
+            <input type="checkbox" id="col_{{ col.name }}" name="{{ col.name }}" value="on">
+
+          {% elif col.widget == "number" %}
+            <input type="number" id="col_{{ col.name }}" name="{{ col.name }}" step="any">
+
+          {% elif col.widget == "date" %}
+            <input type="date" id="col_{{ col.name }}" name="{{ col.name }}">
+
+          {% elif col.widget == "datetime" %}
+            <input type="datetime-local" id="col_{{ col.name }}" name="{{ col.name }}">
+
+          {% elif col.widget == "duration_hhmm" %}
+            <div class="m-inline">
+              <input type="number" min="0" id="col_{{ col.name }}__hh" name="{{ col.name }}__hh" placeholder="ore">
+              <span>:</span>
+              <input type="number" min="0" max="59" id="col_{{ col.name }}__mm" name="{{ col.name }}__mm" placeholder="min">
+            </div>
+
+          {% else %}
+            <input type="text" id="col_{{ col.name }}" name="{{ col.name }}">
+
+          {% endif %}
+
+          <div class="hint">Tipo: {{ col.type }} ({{ col.subtype or col.widget }})</div>
+        </div>
+      {% endif %}
+    {% endfor %}
+
+    <div style="margin-top:12px;display:flex;gap:12px;align-items:center;">
+      <button type="submit" class="btn">Inserisci</button>
+      <a href="{{ table_url }}" class="btn">Annulla</a>
+    </div>
+  </form>
+</section>
+{% endblock %}

@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="content">
+  <h1>Memento (CSV → SQLite)</h1>
+  <p>Database: <strong>{{ db_name }}</strong></p>
+
+  <style>
+    .m-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin-top:12px;}
+    .m-card{border:1px solid #e5e5e5;border-radius:10px;padding:12px;background:#fff;}
+    .m-title{font-size:1.05rem;font-weight:700;margin:0 0 10px 0;}
+    .m-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;}
+    .m-actions a{display:inline-block;padding:6px 10px;border:1px solid #ddd;border-radius:8px;text-decoration:none;}
+  </style>
+
+  <div class="m-grid">
+    {% for t in tables %}
+      <div class="m-card">
+        <div class="m-title">{{ t.table_name }}</div>
+        <div class="m-actions">
+          <a href="{{ t.view_url }}">Vedi tabella</a>
+          <a href="{{ t.insert_url }}">Inserisci righe</a>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}
