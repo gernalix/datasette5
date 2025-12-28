@@ -1,0 +1,92 @@
+{
+  "items": [
+    {
+      "farmaco": "prep",
+      "dose_default": ""
+    },
+    {
+      "farmaco": "litio",
+      "dose_default": "5"
+    },
+    {
+      "farmaco": "tadalafil",
+      "dose_default": "5"
+    },
+    {
+      "farmaco": "finasteride",
+      "dose_default": "1.25"
+    },
+    {
+      "farmaco": "olanzapina",
+      "dose_default": "30"
+    },
+    {
+      "farmaco": "paracetamolo",
+      "dose_default": "1000"
+    },
+    {
+      "farmaco": "ketoconazolo",
+      "dose_default": ""
+    },
+    {
+      "farmaco": "circadin",
+      "dose_default": "4"
+    },
+    {
+      "farmaco": "minoxidil",
+      "dose_default": ""
+    },
+    {
+      "farmaco": "tretinoina",
+      "dose_default": ""
+    },
+    {
+      "farmaco": "duloxetina",
+      "dose_default": "90"
+    },
+    {
+      "farmaco": "omega",
+      "dose_default": "1.8"
+    },
+    {
+      "farmaco": "vit D",
+      "dose_default": "4000"
+    },
+    {
+      "farmaco": "psyllium",
+      "dose_default": "5"
+    },
+    {
+      "farmaco": "l-teanina",
+      "dose_default": "250"
+    },
+    {
+      "farmaco": "taurina",
+      "dose_default": "2000"
+    },
+    {
+      "farmaco": "NAC",
+      "dose_default": "800"
+    },
+    {
+      "farmaco": "zinco",
+      "dose_default": "15"
+    },
+    {
+      "farmaco": "elettroliti",
+      "dose_default": ""
+    },
+    {
+      "farmaco": "folato",
+      "dose_default": ""
+    },
+    {
+      "farmaco": "b12",
+      "dose_default": ""
+    },
+    {
+      "farmaco": "ferro",
+      "dose_default": "27"
+    }
+  ]
+}

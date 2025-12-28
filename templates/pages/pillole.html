@@ -1,0 +1,109 @@
+{% extends "page.html" %}
+
+{% block title %}pillole{% endblock %}
+
+{% block content %}
+<style>
+  /* v1 */
+  .pillole-grid{
+    display:grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 12px;
+    margin-bottom: 18px;
+  }
+  .pillole-card{
+    border:1px solid rgba(0,0,0,.15);
+    border-radius: 10px;
+    padding: 12px;
+    background: rgba(255,255,255,.85);
+  }
+  .pillole-card h3{
+    margin: 0 0 6px 0;
+    font-size: 16px;
+  }
+  .pillole-sub{
+    opacity:.75;
+    font-size: 13px;
+    margin-bottom: 10px;
+  }
+  .pillole-actions{
+    display:flex;
+    gap: 8px;
+    align-items:center;
+  }
+  .pillole-actions button{
+    font-size: 18px;
+    line-height: 1;
+    padding: 6px 10px;
+    border-radius: 10px;
+    border:1px solid rgba(0,0,0,.2);
+    background: rgba(255,255,255,.9);
+    cursor:pointer;
+  }
+  .pillole-actions button:hover{
+    filter: brightness(0.98);
+  }
+  .pillole-dosebox{
+    margin-top: 10px;
+  }
+  .pillole-dosebox input{
+    width: 100%;
+    padding: 8px 10px;
+    border-radius: 10px;
+    border:1px solid rgba(0,0,0,.2);
+  }
+  #pillole-recent{
+    width:100%;
+    border-collapse: collapse;
+  }
+  #pillole-recent th, #pillole-recent td{
+    border-bottom: 1px solid rgba(0,0,0,.12);
+    padding: 8px 10px;
+    text-align:left;
+    font-size: 14px;
+  }
+  #pillole-recent th{
+    position: sticky;
+    top: 0;
+    background: #fff;
+    z-index: 1;
+  }
+</style>
+
+<h2>Pillole</h2>
+
+<div class="pillole-grid">
+  {% for it in pillole_farmaci %}
+    <div class="pillole-card" data-pillole-card data-farmaco="{{ it.farmaco }}" data-dose-default="{{ it.dose_default }}">
+      <h3>{{ it.farmaco }}</h3>
+      <div class="pillole-sub">
+        {% if it.dose_default %}Dose default: <strong>{{ it.dose_default }}</strong>{% else %}Dose default: —{% endif %}
+      </div>
+      <div class="pillole-actions">
+        <button type="button" title="Inserisci dose default (now)" data-action="quick">⚡</button>
+        <button type="button" title="Inserisci dose personalizzata" data-action="plus">➕</button>
+      </div>
+
+      <div class="pillole-dosebox" data-dose-box hidden>
+        <input type="text" inputmode="decimal" autocomplete="off" data-dose-input placeholder="Dose" />
+      </div>
+    </div>
+  {% endfor %}
+</div>
+
+<h3>Ultime entry</h3>
+<table id="pillole-recent">
+  <thead>
+    <tr>
+      <th>quando</th>
+      <th>farmaco</th>
+      <th>dose</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td colspan="3" style="opacity:.65">caricamento…</td></tr>
+  </tbody>
+</table>
+
+<script src="/static/custom/pillole.js"></script>
+{% endblock %}

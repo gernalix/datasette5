@@ -1,3 +1,4 @@
+# v1
 import os, sys, subprocess
 
 HERE = os.path.dirname(__file__)
@@ -17,6 +18,7 @@ args = [
     "--static", "custom:static/custom",
     "--metadata", os.path.join(HERE, "metadata.json"),
     "--template-dir", os.path.join(HERE, "templates"),
+    "--plugins-dir", os.path.join(HERE, "plugins"),
 ]
 
 print("[LAUNCH]", " ".join(f'"{a}"' if " " in a else a for a in args))
