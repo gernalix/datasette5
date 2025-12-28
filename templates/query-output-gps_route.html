@@ -1,4 +1,4 @@
-<!-- v16 -->
+<!-- v19 -->
 {% extends "base.html" %}
 
 {% block title %}Percorso GPS{% endblock %}
@@ -172,19 +172,33 @@
         return 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
       }
 
-      const NEAR_PLACE_RADIUS_M = 40;
-      const MIN_STEP_M = 5;
+      // parametri
+      const NEAR_PLACE_RADIUS_M = 40;  // per filtrare punti vicino a un luogo (se luogo_id è valorizzato)
+      const MIN_STEP_M = 5;           // distanza minima tra due punti consecutivi della traccia
+      const STAY_RADIUS_M = 80;       // raggio per considerare "stessa zona"
+      const STAY_MIN_MINUTES = 3;     // durata minima per chiamarla sosta
+
+      // filtro anti-zigzag
+      const ZIG_MAX_SEG_M = 60;       // segmenti piccoli max 60 m
+      const ZIG_MIN_IMPROVEMENT_M = 10; // quanto la scorciatoia deve essere più corta per eliminare il vertice
 
       fetch(jsonUrl.toString())
         .then(r => r.json())
         .then(rows => {
+          // ordina per timestamp, nel dubbio
+          rows.sort((a, b) => {
+            const ta = Date.parse(a.tstamp || a.t || "");
+            const tb = Date.parse(b.tstamp || b.t || "");
+            return ta - tb;
+          });
+
           const luogo = {};  // centroidi + range tstamp
           const path = [];
           const pathPts = [];
           const markerLatLngs = [];
-          let last = null;
+          let lastPathPoint = null;
 
-          // 1) raccogli tutte le info luogo
+          // 1) raccogli tutte le info luogo (se esistono luogo_id / luogo_nome)
           rows.forEach(r => {
             if (!r.luogo_id) return;
             const la = parseFloat(r.lat);
@@ -194,7 +208,7 @@
             if (!luogo[id]) {
               luogo[id] = {
                 latSum: 0, lonSum: 0, count: 0,
-                name: r.luogo_nome,
+                name: r.luogo_nome || r.indirizzo,
                 tMin: r.tstamp, tMax: r.tstamp
               };
             }
@@ -214,7 +228,81 @@
             tMax: info.tMax
           }));
 
-          // 2) ricostruisci il percorso
+          function addPathPoint(lat, lon, tIso) {
+            const newPt = { lat, lon, t: tIso };
+
+            // distanza minima tra punti consecutivi
+            if (lastPathPoint) {
+              const dLast = distM(lastPathPoint.lat, lastPathPoint.lon, lat, lon);
+              if (dLast < MIN_STEP_M) {
+                return;
+              }
+            }
+
+            // anti-zigzag: controlla il triangolino A-B-C
+            if (path.length >= 2) {
+              const [aLat, aLon] = path[path.length - 2];
+              const [bLat, bLon] = path[path.length - 1];
+              const A = { lat: aLat, lon: aLon };
+              const B = { lat: bLat, lon: bLon };
+              const C = { lat, lon };
+
+              const dAB = distM(A.lat, A.lon, B.lat, B.lon);
+              const dBC = distM(B.lat, B.lon, C.lat, C.lon);
+              const dAC = distM(A.lat, A.lon, C.lat, C.lon);
+
+              if (
+                dAB < ZIG_MAX_SEG_M &&
+                dBC < ZIG_MAX_SEG_M &&
+                dAC + ZIG_MIN_IMPROVEMENT_M < dAB + dBC
+              ) {
+                // il vertice B è inutile: sostituisci B con C
+                path[path.length - 1] = [lat, lon];
+                pathPts[pathPts.length - 1] = newPt;
+                lastPathPoint = { lat, lon };
+                return;
+              }
+            }
+
+            path.push([lat, lon]);
+            pathPts.push(newPt);
+            lastPathPoint = { lat, lon };
+          }
+
+          // 2) ricostruisci il percorso con rilevazione soste
+          let cluster = [];
+          let clusterCenter = null;
+          let clusterStartTime = null;
+
+          function flushCluster() {
+            if (!cluster.length) return;
+
+            const durationMin = (cluster[cluster.length - 1].t - clusterStartTime) / 60000;
+
+            if (durationMin >= STAY_MIN_MINUTES) {
+              // sosta prolungata -> singolo punto medio
+              const sum = cluster.reduce((acc, p) => {
+                acc.lat += p.lat;
+                acc.lon += p.lon;
+                return acc;
+              }, { lat: 0, lon: 0 });
+              const avgLat = sum.lat / cluster.length;
+              const avgLon = sum.lon / cluster.length;
+              const tIso = new Date(clusterStartTime).toISOString();
+              addPathPoint(avgLat, avgLon, tIso);
+            } else {
+              // non è una vera sosta -> tieni tutti i punti (ma passano dall'anti-zigzag)
+              cluster.forEach(p => {
+                const tIso = new Date(p.t).toISOString();
+                addPathPoint(p.lat, p.lon, tIso);
+              });
+            }
+
+            cluster = [];
+            clusterCenter = null;
+            clusterStartTime = null;
+          }
+
           rows.forEach(r => {
             let lat = parseFloat(r.lat);
             let lon = parseFloat(r.lon);
@@ -222,39 +310,69 @@
 
             const luogoId = r.luogo_id;
 
+            // Se il punto ha luogo_id, spostalo sul centroide del luogo
             if (luogoId) {
               const c = centers.find(c => c.id == luogoId);
-              if (c) { lat = c.lat; lon = c.lon; }
-            } else {
+              if (c) {
+                lat = c.lat;
+                lon = c.lon;
+              }
+            } else if (centers.length) {
+              // Se è vicino a un luogo conosciuto, scartalo (evita zig-zag dentro l'edificio)
               const near = centers.some(c =>
                 distM(lat, lon, c.lat, c.lon) < NEAR_PLACE_RADIUS_M
               );
               if (near) return;
             }
 
-            if (last) {
-              if (distM(last.lat, last.lon, lat, lon) < MIN_STEP_M) return;
+            const tMs = Date.parse(r.tstamp);
+            if (isNaN(tMs)) return;
+
+            const pt = { lat, lon, t: tMs };
+
+            if (!cluster.length) {
+              cluster.push(pt);
+              clusterCenter = { lat, lon };
+              clusterStartTime = tMs;
+              return;
             }
 
-            path.push([lat, lon]);
-            pathPts.push({lat, lon, t: r.tstamp});
-            last = {lat, lon};
+            const dToCenter = distM(clusterCenter.lat, clusterCenter.lon, lat, lon);
+
+            if (dToCenter <= STAY_RADIUS_M) {
+              // ancora nella stessa zona -> parte della sosta
+              cluster.push(pt);
+              const n = cluster.length;
+              clusterCenter = {
+                lat: clusterCenter.lat + (lat - clusterCenter.lat) / n,
+                lon: clusterCenter.lon + (lon - clusterCenter.lon) / n
+              };
+            } else {
+              // ci siamo spostati altrove -> chiudi cluster precedente
+              flushCluster();
+              cluster.push(pt);
+              clusterCenter = { lat, lon };
+              clusterStartTime = tMs;
+            }
           });
 
-          // linee
+          // flush finale dell'ultimo cluster
+          flushCluster();
+
+          // 3) disegna polilinea
           if (path.length > 1) {
-            L.polyline(path, {weight:4}).addTo(map);
+            L.polyline(path, { weight: 4 }).addTo(map);
           }
 
-          // tooltip sui punti della traccia
+          // 4) tooltip sui punti della traccia (già compressi)
           pathPts.forEach(p => {
             if (!p.t) return;
-            L.circleMarker([p.lat, p.lon], {radius:3})
+            L.circleMarker([p.lat, p.lon], { radius: 3 })
               .addTo(map)
-              .bindTooltip(formatTimestamp(p.t), {direction:"top"});
+              .bindTooltip(formatTimestamp(p.t), { direction: "top" });
           });
 
-          // marker luoghi con NUOVO formato tooltip + <br>
+          // 5) marker luoghi (se esistono)
           centers.forEach(c => {
             const lines = [];
             lines.push((c.name || "luogo") + " (#" + c.id + ")");
@@ -264,17 +382,11 @@
               const e = splitDateTime(c.tMax);
 
               if (s.date === e.date) {
-                // stessa data:
-                // 29-11-25
-                // 07:56 - 08:01
                 const dateLine = formatDateShort(s);
                 const timeLine = formatTimeShort(s) + " - " + formatTimeShort(e);
                 lines.push(dateLine);
                 lines.push(timeLine);
               } else {
-                // date diverse:
-                // 29-11-25, 07:56
-                // 30-11-25, 11:42
                 const first = formatDateShort(s) + ", " + formatTimeShort(s);
                 const second = formatDateShort(e) + ", " + formatTimeShort(e);
                 lines.push(first);
@@ -289,18 +401,16 @@
             const html = lines.join("<br>");
 
             const m = L.marker([c.lat, c.lon]);
-            m.addTo(map).bindTooltip(html, {
-              direction: "top"
-            });
+            m.addTo(map).bindTooltip(html, { direction: "top" });
             m.on("click", () => window.open("/output/luogo/" + c.id, "_blank"));
             markerLatLngs.push([c.lat, c.lon]);
           });
 
           const all = path.concat(markerLatLngs);
           if (all.length > 0) {
-            map.fitBounds(L.latLngBounds(all), {padding:[20,20]});
+            map.fitBounds(L.latLngBounds(all), { padding: [20, 20] });
           } else {
-            map.setView([0,0], 2);
+            map.setView([0, 0], 2);
           }
         });
     })();
