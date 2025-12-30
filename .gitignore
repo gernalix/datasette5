@@ -3,3 +3,4 @@ output.db-shm
 output.db-shm
 output.db-wal
 
+output.db-wal

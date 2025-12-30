@@ -1,4 +1,4 @@
-# v6
+# v7
 # plugins/pillole_ui.py
 # -*- coding: utf-8 -*-
 
@@ -196,8 +196,8 @@ async def pillole_recent(request, datasette):
 def register_routes():
     return [
         (r"^/-/pillole/add$", pillole_add),
-        (r"^/-/pillole/recent\\.json$", pillole_recent),
-        (r"^/-/pillole/pillole\\.js$", pillole_js),
+        (r"^/-/pillole/recent\.json$", pillole_recent),
+        (r"^/-/pillole/pillole\.js$", pillole_js),
     ]
 
 
