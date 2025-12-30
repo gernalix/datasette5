@@ -1,39 +1,89 @@
-// pillole.js v11
-// Fix definitivo: CSRF via meta + POST form-urlencoded (compatibile con Datasette 0.65.x) + rows=[]
+// v14
+// static/custom/pillole.js
+// CSRF fix (Datasette): support both 'ds_csrftoken' and 'csrftoken' cookies,
+// and send token as BOTH header and form field(s).
+// Robust init + basic UX feedback
 
 (() => {
-  function qs(sel, root = document) {
-    return root.querySelector(sel);
-  }
-  function qsa(sel, root = document) {
-    return Array.from(root.querySelectorAll(sel));
+  function qs(sel, root = document) { return root.querySelector(sel); }
+  function qsa(sel, root = document) { return Array.from(root.querySelectorAll(sel)); }
+
+  function readUrls() {
+    const el = qs("#pillole-urls");
+    if (!el) return { add: "./-/pillole/add", recent: "./-/pillole/recent.json" };
+    try {
+      const obj = JSON.parse(el.textContent || "{}");
+      return {
+        add: obj.add || "./-/pillole/add",
+        recent: obj.recent || "./-/pillole/recent.json",
+      };
+    } catch {
+      return { add: "./-/pillole/add", recent: "./-/pillole/recent.json" };
+    }
   }
 
-  // URL relative: base_url-safe
-  const URL_RECENT = "./-/pillole/recent.json";
-  const URL_ADD = "./-/pillole/add";
+  const URLS = readUrls();
+
+  function escapeHtml(s) {
+    return String(s)
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+  }
+
+  function getCookie(name) {
+    const esc = name.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&");
+    const m = document.cookie.match(new RegExp("(^|;\s*)" + esc + "=([^;]*)"));
+    return m ? decodeURIComponent(m[2]) : "";
+  }
 
   function getCsrfToken() {
-    const el = document.querySelector('meta[name="ds-csrftoken"]');
-    return el ? (el.getAttribute("content") || "") : "";
+    // Datasette commonly uses ds_csrftoken
+    const a = getCookie("ds_csrftoken");
+    if (a) return { token: a, cookieName: "ds_csrftoken" };
+
+    // Some installs/plugins might use csrftoken
+    const b = getCookie("csrftoken");
+    if (b) return { token: b, cookieName: "csrftoken" };
+
+    // Fallbacks if present in page
+    const m = qs('meta[name="csrf-token"]');
+    if (m && m.getAttribute("content")) return { token: m.getAttribute("content"), cookieName: "" };
+
+    const hidden = qs('input[name="csrftoken"], input[name="ds_csrftoken"]');
+    if (hidden && hidden.value) return { token: hidden.value, cookieName: "" };
+
+    return { token: "", cookieName: "" };
   }
 
-  async function apiGet(url) {
-    const r = await fetch(url, { credentials: "same-origin" });
-    if (!r.ok) {
-      const t = await r.text().catch(() => "");
-      throw new Error(`GET ${url} → ${r.status} ${t.slice(0, 200)}`);
+  function setBusy(btn, busy) {
+    if (!btn) return;
+    if (busy) {
+      if (!btn.dataset._oldText) btn.dataset._oldText = btn.textContent || "";
+      btn.textContent = "…";
+      btn.disabled = true;
+    } else {
+      if (btn.dataset._oldText) btn.textContent = btn.dataset._oldText;
+      btn.disabled = false;
     }
-    return r.json();
   }
 
   async function apiPostForm(url, fields) {
-    const token = getCsrfToken();
+    const { token } = getCsrfToken();
     const headers = {};
     if (token) headers["x-csrftoken"] = token;
 
-    // Usa application/x-www-form-urlencoded: Datasette 0.65.x lo gestisce via request.post_vars()
     const body = new URLSearchParams();
+
+    // Datasette checks "POST field did not match cookie" — depending on cookie name.
+    // Send both, harmless if one is ignored.
+    if (token) {
+      body.set("csrftoken", token);
+      body.set("ds_csrftoken", token);
+    }
+
     for (const [k, v] of Object.entries(fields)) {
       if (v === undefined || v === null) continue;
       body.set(k, String(v));
@@ -50,66 +100,36 @@
       const t = await r.text().catch(() => "");
       throw new Error(`POST ${url} → ${r.status} ${t.slice(0, 200)}`);
     }
-    return r.json();
+    return r.json().catch(() => ({}));
   }
 
   async function refresh() {
     const table = qs("#pillole-recent");
     if (!table) return;
-
     const tbody = qs("tbody", table);
     if (!tbody) return;
 
-    tbody.innerHTML = `
-      <tr>
-        <td colspan="3" style="opacity:.65; cursor:pointer">caricamento…</td>
-      </tr>
-    `;
+    const r = await fetch(`${URLS.recent}?limit=20`, { credentials: "same-origin" });
+    if (!r.ok) return;
 
-    let data;
-    try {
-      data = await apiGet(`${URL_RECENT}?limit=100`);
-    } catch (e) {
-      console.error(e);
-      tbody.innerHTML = `
-        <tr>
-          <td colspan="3" style="opacity:.85; color:#b00">${String(e.message || e)}</td>
-        </tr>
-      `;
-      return;
-    }
-
+    const data = await r.json().catch(() => null);
     const rows = (data && Array.isArray(data.rows)) ? data.rows : [];
 
-    // ✅ tabella vuota
-    if (rows.length === 0) {
-      tbody.innerHTML = `
-        <tr>
-          <td colspan="3" style="opacity:.6">nessuna entry</td>
-        </tr>
-      `;
+    tbody.innerHTML = "";
+
+    if (!rows.length) {
+      const tr = document.createElement("tr");
+      tr.innerHTML = '<td colspan="3" style="opacity:.65">— nessuna entry —</td>';
+      tbody.appendChild(tr);
       return;
     }
 
-    // render righe
-    tbody.innerHTML = "";
-    for (const r of rows) {
+    for (const row of rows) {
       const tr = document.createElement("tr");
-
-      const tdQuando = document.createElement("td");
-      tdQuando.textContent = r.quando ?? "";
-      tr.appendChild(tdQuando);
-
-      const tdFarmaco = document.createElement("td");
-      tdFarmaco.textContent = r.farmaco ?? "";
-      tdFarmaco.style.display = "none";
-      tr.appendChild(tdFarmaco);
-
-      const tdDose = document.createElement("td");
-      tdDose.textContent = r.dose ?? "";
-      tdDose.style.display = "none";
-      tr.appendChild(tdDose);
-
+      const quando = row.quando ?? "";
+      const farmaco = row.farmaco ?? "";
+      const dose = row.dose ?? "";
+      tr.innerHTML = `<td>${escapeHtml(quando)}</td><td>${escapeHtml(farmaco)}</td><td>${escapeHtml(dose)}</td>`;
       tbody.appendChild(tr);
     }
   }
@@ -135,20 +155,25 @@
             return;
           }
           dose = input && input.value ? String(input.value).trim() : "";
+        } else {
+          return;
         }
 
         try {
-          await apiPostForm(URL_ADD, { farmaco, dose });
+          setBusy(btn, true);
+          await apiPostForm(URLS.add, { farmaco, dose });
           await refresh();
         } catch (e) {
           console.error(e);
           alert(String(e.message || e));
+        } finally {
+          setBusy(btn, false);
         }
       });
     });
   }
 
-    function init() {
+  function init() {
     bindButtons();
     refresh();
   }
