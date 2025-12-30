@@ -1,5 +1,5 @@
-// pillole.js v7
-// Fix: gestisce correttamente recent.json con rows = []
+// pillole.js v8
+// Fix: niente "caricamento…" infinito (gestisce rows=[] e errori). Usa URL relative (base_url-safe).
 
 (() => {
   function qs(sel, root = document) {
@@ -8,6 +8,10 @@
   function qsa(sel, root = document) {
     return Array.from(root.querySelectorAll(sel));
   }
+
+  // URL relative: funzionano sia con base_url "/" sia con base_url "/qualcosa/"
+  const URL_RECENT = "./-/pillole/recent.json";
+  const URL_ADD = "./-/pillole/add";
 
   async function apiGet(url) {
     const r = await fetch(url, { credentials: "same-origin" });
@@ -33,45 +37,38 @@
     const tbody = qs("tbody", table);
     if (!tbody) return;
 
-    // stato iniziale
     tbody.innerHTML = `
       <tr>
-        <td colspan="3" style="opacity:.65; cursor:pointer">
-          caricamento…
-        </td>
+        <td colspan="3" style="opacity:.65; cursor:pointer">caricamento…</td>
       </tr>
     `;
 
     let data;
     try {
-      data = await apiGet(`${window.PILLOLE_API.recent}?limit=100`);
+      data = await apiGet(`${URL_RECENT}?limit=100`);
     } catch (e) {
+      console.error(e);
       tbody.innerHTML = `
         <tr>
-          <td colspan="3" style="color:#b00">
+          <td colspan="3" style="opacity:.85; color:#b00">
             errore caricamento
           </td>
         </tr>
       `;
-      console.error(e);
       return;
     }
 
-    const rows = data.rows || [];
+    const rows = (data && Array.isArray(data.rows)) ? data.rows : [];
 
-    // ✅ FIX FONDAMENTALE
     if (rows.length === 0) {
       tbody.innerHTML = `
         <tr>
-          <td colspan="3" style="opacity:.6">
-            nessuna entry
-          </td>
+          <td colspan="3" style="opacity:.6">nessuna entry</td>
         </tr>
       `;
       return;
     }
 
-    // render righe
     tbody.innerHTML = "";
     for (const r of rows) {
       const tr = document.createElement("tr");
@@ -106,12 +103,13 @@
         let dose = null;
         if (action === "plus") {
           const input = qs("[data-dose-input]", card);
-          dose = input && input.value ? Number(input.value) : null;
+          const v = input && input.value != null ? String(input.value).trim() : "";
+          dose = v === "" ? null : Number(v);
         }
 
         try {
-          await apiPost(window.PILLOLE_API.add, { farmaco, dose });
-          refresh();
+          await apiPost(URL_ADD, { farmaco, dose });
+          await refresh();
         } catch (e) {
           console.error(e);
           alert("Errore inserimento");

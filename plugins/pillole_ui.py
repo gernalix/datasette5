@@ -1,4 +1,4 @@
-# v9
+# v10
 # plugins/pillole_ui.py
 # -*- coding: utf-8 -*-
 
@@ -6,6 +6,7 @@ import json
 import os
 from datetime import datetime, timezone
 import asyncio
+import sqlite3
 
 from datasette import hookimpl
 from datasette.utils.asgi import Response
@@ -141,45 +142,58 @@ async def pillole_js(request, datasette):
             body = f.read()
     except Exception:
         body = "// pillole.js missing\n"
-    return Response.text(body, content_type="application/javascript; charset=utf-8")
+    return Response.text(body, headers={"content-type": "application/javascript; charset=utf-8"})
 
 async def pillole_add(request, datasette):
     if request.method != "POST":
         return Response.text("Method Not Allowed", status=405)
 
     db = await _get_db(datasette)
-    try:
-        await asyncio.wait_for(_ensure_tables(db), timeout=DB_OP_TIMEOUT)
-    except Exception:
-        return Response.json({"ok": False, "error": "db busy/locked (ensure_tables)"}, status=503)
 
+    # Parse input (accept JSON or form). Dose may be number/null; normalize to string.
     farmaco = ""
-    dose = ""
-    ct = request.headers.get("content-type", "") or ""
-    if "application/json" in ct:
-        data = await request.json()
-        farmaco = (data.get("farmaco") or "").strip()
-        dose = (data.get("dose") or "").strip()
-    else:
-        form = await request.post_vars()
-        farmaco = (form.get("farmaco") or "").strip()
-        dose = (form.get("dose") or "").strip()
+    dose_val = None
+    try:
+        ct = request.headers.get("content-type", "") or ""
+        if "application/json" in ct:
+            data = await request.json()
+            farmaco = (data.get("farmaco") or "").strip()
+            dose_val = data.get("dose", None)
+        else:
+            form = await request.post_vars()
+            farmaco = (form.get("farmaco") or "").strip()
+            dose_val = form.get("dose", None)
+    except Exception as e:
+        return Response.json({"ok": False, "error": f"bad request: {e!s}"}, status=400)
 
     if not farmaco:
         return Response.json({"ok": False, "error": "farmaco missing"}, status=400)
 
+    dose = "" if dose_val is None else str(dose_val).strip()
     quando = _utc_now_iso_no_ms()
 
-    try:
-        await asyncio.wait_for(
-            db.execute_write(
-                "INSERT INTO pillole(quando, farmaco, dose) VALUES (?, ?, ?)",
-                [quando, farmaco, dose],
-            ),
-            timeout=DB_OP_TIMEOUT,
+    async def _insert_once():
+        await db.execute_write(
+            "INSERT INTO pillole(quando, farmaco, dose) VALUES (?, ?, ?)",
+            [quando, farmaco, dose],
         )
+
+    # Try insert; if table missing on a fresh DB, create it once and retry.
+    try:
+        await asyncio.wait_for(_insert_once(), timeout=DB_OP_TIMEOUT)
+    except sqlite3.OperationalError as e:
+        msg = str(e).lower()
+        if "no such table" in msg:
+            try:
+                await asyncio.wait_for(_ensure_tables(db), timeout=DB_OP_TIMEOUT)
+                await asyncio.wait_for(_insert_once(), timeout=DB_OP_TIMEOUT)
+            except Exception:
+                return Response.json({"ok": False, "error": "db busy/locked (ensure/insert)"}, status=503)
+        else:
+            return Response.json({"ok": False, "error": f"db error: {e!s}"}, status=500)
     except Exception:
         return Response.json({"ok": False, "error": "db busy/locked (insert)"}, status=503)
+
     return Response.json({"ok": True, "row": {"quando": quando, "farmaco": farmaco, "dose": dose}})
 
 
