@@ -1,4 +1,4 @@
-// v2
+// v3
 // static/custom/pillole.js
 
 (function () {
@@ -71,7 +71,7 @@
       const tbody = document.querySelector("#pillole-recent tbody");
       if (tbody) {
         const msg = String((e && e.message) ? e.message : e);
-        tbody.innerHTML = "<tr><td colspan="3" style="opacity:.75">errore caricamento: " + escapeHtml(msg) + "</td></tr>";
+        tbody.innerHTML = `<tr><td colspan="3" style="opacity:.75">errore caricamento: ${escapeHtml(msg)}</td></tr>`;
       }
     }
   }
