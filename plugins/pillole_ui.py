@@ -1,20 +1,54 @@
-# v3
+# v5
 # plugins/pillole_ui.py
 # -*- coding: utf-8 -*-
 
-import os
 import json
-from datetime import datetime
+import os
+from datetime import datetime, timezone
 
 from datasette import hookimpl
 from datasette.utils.asgi import Response
 
 
-BASE_DIR = os.path.dirname(os.path.dirname(__file__))
+# This file is used ONLY to seed the DB the first time.
+BASE_DIR = os.path.dirname(os.path.dirname(__file__))  # project root
 FARMACI_JSON = os.path.join(BASE_DIR, "static", "custom", "pillole_farmaci.json")
 
+PILLOLE_JS = os.path.join(BASE_DIR, "static", "custom", "pillole.js")
 
-def _load_farmaci():
+DB_NAME = "output"  # derived from output.db
+
+
+def _utc_now_iso_no_ms():
+    # SQLite + JS friendly ISO without milliseconds, UTC
+    return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+
+
+async def _ensure_tables(db):
+    await db.execute_write(
+        """
+        CREATE TABLE IF NOT EXISTS pillole (
+            id INTEGER PRIMARY KEY,
+            quando TEXT NOT NULL,
+            farmaco TEXT NOT NULL,
+            dose TEXT
+        )
+        """
+    )
+    await db.execute_write(
+        "CREATE INDEX IF NOT EXISTS idx_pillole_quando ON pillole(quando)"
+    )
+    await db.execute_write(
+        """
+        CREATE TABLE IF NOT EXISTS pillole_farmaci (
+            farmaco TEXT PRIMARY KEY,
+            dose_default TEXT
+        )
+        """
+    )
+
+
+def _load_farmaci_seed_from_json():
     try:
         with open(FARMACI_JSON, "r", encoding="utf-8") as f:
             data = json.load(f)
@@ -35,38 +69,71 @@ def _load_farmaci():
         return []
 
 
-async def _ensure_table(db):
-    # 'quando' default is a fallback; inserts are done explicitly in Python
-    await db.execute_write(
-        """
-        CREATE TABLE IF NOT EXISTS pillole (
-            quando TEXT NOT NULL,
-            farmaco TEXT NOT NULL,
-            dose   TEXT
+async def _seed_farmaci_if_needed(db):
+    # Seed only once: if table empty.
+    row = await db.execute("SELECT COUNT(*) AS c FROM pillole_farmaci")
+    if (row.first() or {}).get("c", 0) > 0:
+        return
+
+    seed = _load_farmaci_seed_from_json()
+    if not seed:
+        return
+
+    def _do(conn):
+        conn.executemany(
+            "INSERT OR REPLACE INTO pillole_farmaci(farmaco, dose_default) VALUES (?, ?)",
+            [(x["farmaco"], x.get("dose_default", "")) for x in seed],
         )
-        """
+
+    await db.execute_write_fn(_do)
+
+
+async def _load_farmaci_from_db(db):
+    res = await db.execute(
+        "SELECT farmaco, COALESCE(dose_default,'') AS dose_default FROM pillole_farmaci ORDER BY lower(farmaco)"
     )
-    await db.execute_write(
-        "CREATE INDEX IF NOT EXISTS idx_pillole_quando ON pillole(quando)"
-    )
+    return list(res.rows)
+
+
+async def _get_db(datasette):
+    # Prefer output DB; fall back to default if name differs
+    try:
+        return datasette.get_database(DB_NAME)
+    except Exception:
+        return datasette.get_database()
 
 
 @hookimpl
 async def startup(datasette):
-    db = datasette.get_database()  # default DB
-    await _ensure_table(db)
+    db = await _get_db(datasette)
+    await _ensure_tables(db)
+    await _seed_farmaci_if_needed(db)
+    # Cache for templates: no more file reads after startup
+    datasette._pillole_farmaci = await _load_farmaci_from_db(db)  # type: ignore[attr-defined]
 
+
+
+PILLOLE_JS = os.path.join(BASE_DIR, "static", "custom", "pillole.js")
+
+
+async def pillole_js(request, datasette):
+    try:
+        with open(PILLOLE_JS, "r", encoding="utf-8") as f:
+            body = f.read()
+    except Exception:
+        body = "// pillole.js missing\n"
+    return Response.text(body, content_type="application/javascript; charset=utf-8")
 
 async def pillole_add(request, datasette):
     if request.method != "POST":
         return Response.text("Method Not Allowed", status=405)
 
-    db = datasette.get_database()
-    await _ensure_table(db)
+    db = await _get_db(datasette)
+    await _ensure_tables(db)
 
     farmaco = ""
     dose = ""
-    ct = request.headers.get("content-type", "")
+    ct = request.headers.get("content-type", "") or ""
     if "application/json" in ct:
         data = await request.json()
         farmaco = (data.get("farmaco") or "").strip()
@@ -77,56 +144,34 @@ async def pillole_add(request, datasette):
         dose = (form.get("dose") or "").strip()
 
     if not farmaco:
-        return Response.json({"ok": False, "error": "farmaco mancante"}, status=400)
+        return Response.json({"ok": False, "error": "farmaco missing"}, status=400)
 
-    if dose == "":
-        for it in _load_farmaci():
-            if it["farmaco"] == farmaco and it["dose_default"]:
-                dose = it["dose_default"]
-                break
-
-    quando = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+    quando = _utc_now_iso_no_ms()
 
     await db.execute_write(
-        "INSERT INTO pillole (quando, farmaco, dose) VALUES (:quando, :farmaco, :dose)",
-        {"quando": quando, "farmaco": farmaco, "dose": dose or None},
+        "INSERT INTO pillole(quando, farmaco, dose) VALUES (?, ?, ?)",
+        [quando, farmaco, dose],
     )
+    return Response.json({"ok": True, "row": {"quando": quando, "farmaco": farmaco, "dose": dose}})
 
-    return Response.json(
-        {
-            "ok": True,
-            "row": {"quando": quando, "farmaco": farmaco, "dose": dose},
-        }
-    )
-
-
-
-async def pillole_js(request, datasette):
-    # Serve the JS from disk to avoid dependency on --static mounting
-    try:
-        js_path = os.path.join(BASE_DIR, "static", "custom", "pillole.js")
-        with open(js_path, "r", encoding="utf-8") as f:
-            body = f.read()
-        return Response.text(body, content_type="application/javascript; charset=utf-8")
-    except Exception as e:
-        return Response.text(
-            f"console.error('pillole.js load failed: {e!s}');",
-            content_type="application/javascript; charset=utf-8",
-            status=500,
-        )
 
 async def pillole_recent(request, datasette):
-    db = datasette.get_database()
-    await _ensure_table(db)
+    db = await _get_db(datasette)
+    await _ensure_tables(db)
 
     try:
-        limit = int(request.args.get("limit") or 30)
+        limit = int(request.args.get("limit") or "30")
     except Exception:
         limit = 30
-    limit = max(1, min(limit, 200))
+    limit = max(1, min(limit, 500))
 
     res = await db.execute(
-        "SELECT quando, farmaco, COALESCE(dose, '') AS dose FROM pillole ORDER BY quando DESC LIMIT ?",
+        """
+        SELECT quando, farmaco, dose
+        FROM pillole
+        ORDER BY quando DESC
+        LIMIT ?
+        """,
         [limit],
     )
     return Response.json({"ok": True, "rows": list(res.rows)})
@@ -136,10 +181,12 @@ async def pillole_recent(request, datasette):
 def register_routes():
     return [
         (r"^/-/pillole/add$", pillole_add),
-        (r"^/-/pillole/recent\.json$", pillole_recent),
+        (r"^/-/pillole/recent\\.json$", pillole_recent),
+        (r"^/-/pillole/pillole\\.js$", pillole_js),
     ]
 
 
 @hookimpl
 def extra_template_vars(datasette):
-    return {"pillole_farmaci": _load_farmaci()}
+    # Templates read from in-memory cache; no need to read CSV/JSON anymore after startup.
+    return {"pillole_farmaci": getattr(datasette, "_pillole_farmaci", [])}

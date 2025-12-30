@@ -1,4 +1,4 @@
-// v4
+// v5
 // static/custom/pillole.js
 
 (function () {
@@ -7,7 +7,6 @@
   }
 
   function formatDdMmYyHhMm(iso) {
-    // iso like 2025-12-28T18:01:02
     const d = new Date(iso);
     if (Number.isNaN(d.getTime())) return iso;
     const dd = pad2(d.getDate());
@@ -18,25 +17,80 @@
     return `${dd}-${mm}-${yy} ${hh}:${mi}`;
   }
 
-  async function postAdd(farmaco, dose) {
-    const body = new URLSearchParams({ farmaco, dose: dose ?? "" });
-    const r = await fetch("/-/pillole/add", {
-      method: "POST",
-      headers: { "content-type": "application/x-www-form-urlencoded;charset=UTF-8" },
-      body,
-    });
-    const j = await r.json().catch(() => ({}));
-    if (!r.ok || !j.ok) {
-      throw new Error(j.error || `HTTP ${r.status}`);
+  function getCookie(name) {
+    const parts = document.cookie.split(";").map((x) => x.trim());
+    for (const p of parts) {
+      if (p.startsWith(name + "=")) return decodeURIComponent(p.slice(name.length + 1));
     }
-    return j.row;
+    return null;
   }
 
-  async function loadRecent(limit = 30) {
-    const r = await fetch(`/-/pillole/recent.json?limit=${encodeURIComponent(limit)}`, { credentials: "same-origin" });
-    const j = await r.json();
-    if (!j.ok) throw new Error("recent failed");
-    return j.rows || [];
+  function qs(sel, root) {
+    return (root || document).querySelector(sel);
+  }
+
+  function qsa(sel, root) {
+    return Array.from((root || document).querySelectorAll(sel));
+  }
+
+  async function apiPost(url, payload) {
+    const csrftoken = getCookie("csrftoken");
+    const headers = { "content-type": "application/json" };
+    if (csrftoken) headers["x-csrftoken"] = csrftoken;
+
+    const res = await fetch(url, {
+      method: "POST",
+      credentials: "same-origin",
+      headers,
+      body: JSON.stringify(payload || {}),
+    });
+
+    const text = await res.text();
+    let data = null;
+    try { data = JSON.parse(text); } catch (e) { /* ignore */ }
+
+    if (!res.ok) {
+      const msg = (data && (data.error || data.message)) || text || `HTTP ${res.status}`;
+      throw new Error(msg);
+    }
+    return data;
+  }
+
+  async function apiGet(url) {
+    const res = await fetch(url, { credentials: "same-origin" });
+    const text = await res.text();
+    let data = null;
+    try { data = JSON.parse(text); } catch (e) { /* ignore */ }
+    if (!res.ok) {
+      const msg = (data && (data.error || data.message)) || text || `HTTP ${res.status}`;
+      throw new Error(msg);
+    }
+    return data;
+  }
+
+  function renderRows(rows) {
+    const tbody = qs("#pillole-recent tbody");
+    if (!tbody) return;
+
+    if (!rows || !rows.length) {
+      tbody.innerHTML = `<tr><td colspan="3" style="opacity:.65">nessuna entry</td></tr>`;
+      return;
+    }
+
+    const html = rows
+      .map((r) => {
+        const quando = r.quando ? formatDdMmYyHhMm(r.quando) : "";
+        const farmaco = (r.farmaco || "").toString();
+        const dose = r.dose == null ? "" : (r.dose || "").toString();
+        return `<tr>
+          <td>${escapeHtml(quando)}</td>
+          <td>${escapeHtml(farmaco)}</td>
+          <td>${escapeHtml(dose)}</td>
+        </tr>`;
+      })
+      .join("");
+
+    tbody.innerHTML = html;
   }
 
   function escapeHtml(s) {
@@ -45,68 +99,40 @@
       .replaceAll("<", "&lt;")
       .replaceAll(">", "&gt;")
       .replaceAll('"', "&quot;")
-      .replaceAll("'", "&#039;");
-  }
-
-  function getCookie(name) {
-    const safe = name.replace(/([.$?*|{}()\[\]\\\/\+^])/g, "\\$1");
-    const m = document.cookie.match(new RegExp("(^|; )" + safe + "=([^;]*)"));
-    return m ? decodeURIComponent(m[2]) : "";
-  }
-
-  function getCsrfToken() {
-    // Datasette uses 'csrftoken' cookie for CSRF protection
-    return getCookie("csrftoken");
-  }
-
-  function renderRecent(rows) {
-    const tbody = document.querySelector("#pillole-recent tbody");
-    if (!tbody) return;
-    tbody.innerHTML = rows
-      .map((r) => {
-        const quando = formatDdMmYyHhMm(r.quando);
-        return `<tr>
-          <td>${escapeHtml(quando)}</td>
-          <td>${escapeHtml(r.farmaco)}</td>
-          <td>${escapeHtml(r.dose || "")}</td>
-        </tr>`;
-      })
-      .join("");
+      .replaceAll("'", "&#39;");
   }
 
   async function refresh() {
-    try {
-      const rows = await loadRecent(50);
-      renderRecent(rows);
-    } catch (e) {
-      const tbody = document.querySelector("#pillole-recent tbody");
-      if (tbody) {
-        const msg = String((e && e.message) ? e.message : e);
-        tbody.innerHTML = `<tr><td colspan="3" style="opacity:.75">errore caricamento: ${escapeHtml(msg)}</td></tr>`;
-      }
-    }
+    const tbody = qs("#pillole-recent tbody");
+    if (tbody) tbody.innerHTML = `<tr><td colspan="3" style="opacity:.65">caricamento…</td></tr>`;
+    const data = await apiGet("/-/pillole/recent.json?limit=100");
+    renderRows((data && data.rows) || []);
+  }
+
+  async function addEntry(farmaco, dose) {
+    await apiPost("/-/pillole/add", { farmaco, dose });
+    await refresh();
   }
 
   function attachCardHandlers() {
-    document.querySelectorAll("[data-pillole-card]").forEach((card) => {
+    qsa(".pillole-card").forEach((card) => {
       const farmaco = card.getAttribute("data-farmaco") || "";
       const doseDefault = card.getAttribute("data-dose-default") || "";
 
-      const btnQuick = card.querySelector("[data-action='quick']");
-      const btnPlus = card.querySelector("[data-action='plus']");
-      const box = card.querySelector("[data-dose-box]");
-      const input = card.querySelector("[data-dose-input]");
+      const btnZap = qs(".pillole-zap", card);
+      const btnPlus = qs(".pillole-plus", card);
+      const box = qs(".pillole-custom-box", card);
+      const input = qs(".pillole-custom-input", card);
 
-      if (btnQuick) {
-        btnQuick.addEventListener("click", async () => {
-          btnQuick.disabled = true;
+      if (btnZap) {
+        btnZap.addEventListener("click", async () => {
+          btnZap.disabled = true;
           try {
-            await postAdd(farmaco, doseDefault);
-            await refresh();
+            await addEntry(farmaco, doseDefault || null);
           } catch (e) {
-            alert(String(e.message || e));
+            alert(`Errore: ${e.message}`);
           } finally {
-            btnQuick.disabled = false;
+            btnZap.disabled = false;
           }
         });
       }
@@ -125,14 +151,14 @@
           if (ev.key !== "Enter") return;
           ev.preventDefault();
           const dose = (input.value || "").trim();
+          if (!dose) return;
           input.disabled = true;
           try {
-            await postAdd(farmaco, dose);
-            box.hidden = true;
+            await addEntry(farmaco, dose);
             input.value = "";
-            await refresh();
+            box.hidden = true;
           } catch (e) {
-            alert(String(e.message || e));
+            alert(`Errore: ${e.message}`);
           } finally {
             input.disabled = false;
           }
@@ -143,7 +169,12 @@
 
   async function init() {
     attachCardHandlers();
-    await refresh();
+    try {
+      await refresh();
+    } catch (e) {
+      const tbody = qs("#pillole-recent tbody");
+      if (tbody) tbody.innerHTML = `<tr><td colspan="3">Errore caricamento: ${escapeHtml(e.message)}</td></tr>`;
+    }
   }
 
   if (document.readyState === "loading") {
