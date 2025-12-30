@@ -1,4 +1,4 @@
-# v2
+# v3
 # plugins/pillole_ui.py
 # -*- coding: utf-8 -*-
 
@@ -99,6 +99,21 @@ async def pillole_add(request, datasette):
         }
     )
 
+
+
+async def pillole_js(request, datasette):
+    # Serve the JS from disk to avoid dependency on --static mounting
+    try:
+        js_path = os.path.join(BASE_DIR, "static", "custom", "pillole.js")
+        with open(js_path, "r", encoding="utf-8") as f:
+            body = f.read()
+        return Response.text(body, content_type="application/javascript; charset=utf-8")
+    except Exception as e:
+        return Response.text(
+            f"console.error('pillole.js load failed: {e!s}');",
+            content_type="application/javascript; charset=utf-8",
+            status=500,
+        )
 
 async def pillole_recent(request, datasette):
     db = datasette.get_database()

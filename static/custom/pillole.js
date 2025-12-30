@@ -1,4 +1,4 @@
-// v3
+// v4
 // static/custom/pillole.js
 
 (function () {
@@ -33,7 +33,7 @@
   }
 
   async function loadRecent(limit = 30) {
-    const r = await fetch(`/-/pillole/recent.json?limit=${encodeURIComponent(limit)}`);
+    const r = await fetch(`/-/pillole/recent.json?limit=${encodeURIComponent(limit)}`, { credentials: "same-origin" });
     const j = await r.json();
     if (!j.ok) throw new Error("recent failed");
     return j.rows || [];
@@ -46,6 +46,17 @@
       .replaceAll(">", "&gt;")
       .replaceAll('"', "&quot;")
       .replaceAll("'", "&#039;");
+  }
+
+  function getCookie(name) {
+    const safe = name.replace(/([.$?*|{}()\[\]\\\/\+^])/g, "\\$1");
+    const m = document.cookie.match(new RegExp("(^|; )" + safe + "=([^;]*)"));
+    return m ? decodeURIComponent(m[2]) : "";
+  }
+
+  function getCsrfToken() {
+    // Datasette uses 'csrftoken' cookie for CSRF protection
+    return getCookie("csrftoken");
   }
 
   function renderRecent(rows) {
