@@ -1,4 +1,4 @@
-# v7
+# v8
 # plugins/pillole_ui.py
 # -*- coding: utf-8 -*-
 
@@ -172,24 +172,29 @@ async def pillole_add(request, datasette):
 
 async def pillole_recent(request, datasette):
     db = await _get_db(datasette)
-    await _ensure_tables(db)
-
     try:
         limit = int(request.args.get("limit") or "30")
     except Exception:
         limit = 30
     limit = max(1, min(limit, 500))
 
-    res = await db.execute(
-        """
-        SELECT quando, farmaco, dose
-        FROM pillole
-        ORDER BY quando DESC
-        LIMIT ?
-        """,
-        [limit],
-    )
-    return Response.json({"ok": True, "rows": list(res.rows)})
+    # IMPORTANT: never do DB writes on this GET endpoint.
+    # If tables are missing (first run) or the DB is busy/locked,
+    # return an empty result rather than hanging.
+    try:
+        res = await db.execute(
+            """
+            SELECT quando, farmaco, dose
+            FROM pillole
+            ORDER BY quando DESC
+            LIMIT ?
+            """,
+            [limit],
+        )
+        rows = list(res.rows)
+    except Exception:
+        rows = []
+    return Response.json({"ok": True, "rows": rows})
 
 
 @hookimpl

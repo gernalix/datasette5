@@ -1,4 +1,4 @@
-// v5
+// v6
 // static/custom/pillole.js
 
 (function () {
@@ -68,6 +68,24 @@
     return data;
   }
 
+  function getUrls() {
+    // Prefer JSON config injected by template (base_url-safe)
+    const el = document.getElementById("pillole-urls");
+    if (el) {
+      try {
+        const obj = JSON.parse(el.textContent || "{}");
+        if (obj && obj.recent && obj.add) return obj;
+      } catch (e) {
+        /* ignore */
+      }
+    }
+    // Fallback to root-based paths
+    return {
+      recent: "/-/pillole/recent.json",
+      add: "/-/pillole/add",
+    };
+  }
+
   function renderRows(rows) {
     const tbody = qs("#pillole-recent tbody");
     if (!tbody) return;
@@ -105,12 +123,14 @@
   async function refresh() {
     const tbody = qs("#pillole-recent tbody");
     if (tbody) tbody.innerHTML = `<tr><td colspan="3" style="opacity:.65">caricamento…</td></tr>`;
-    const data = await apiGet("/-/pillole/recent.json?limit=100");
+    const urls = getUrls();
+    const data = await apiGet(`${urls.recent}?limit=100`);
     renderRows((data && data.rows) || []);
   }
 
   async function addEntry(farmaco, dose) {
-    await apiPost("/-/pillole/add", { farmaco, dose });
+    const urls = getUrls();
+    await apiPost(urls.add, { farmaco, dose });
     await refresh();
   }
 
@@ -119,10 +139,10 @@
       const farmaco = card.getAttribute("data-farmaco") || "";
       const doseDefault = card.getAttribute("data-dose-default") || "";
 
-      const btnZap = qs(".pillole-zap", card);
-      const btnPlus = qs(".pillole-plus", card);
-      const box = qs(".pillole-custom-box", card);
-      const input = qs(".pillole-custom-input", card);
+      const btnZap = qs('[data-action="quick"]', card);
+      const btnPlus = qs('[data-action="plus"]', card);
+      const box = qs("[data-dose-box]", card);
+      const input = qs("[data-dose-input]", card);
 
       if (btnZap) {
         btnZap.addEventListener("click", async () => {

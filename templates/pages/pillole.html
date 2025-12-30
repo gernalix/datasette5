@@ -105,5 +105,10 @@
   </tbody>
 </table>
 
-<script src="/-/pillole/pillole.js?v=5"></script>
+<script id="pillole-urls" type="application/json">{
+  "add": "{{ urls.path('/-/pillole/add') }}",
+  "recent": "{{ urls.path('/-/pillole/recent.json') }}"
+}</script>
+
+<script src="{{ urls.path('/-/pillole/pillole.js') }}?v=6"></script>
 {% endblock %}
