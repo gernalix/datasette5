@@ -1,4 +1,4 @@
-# v12
+# v14
 # plugins/pillole_ui.py
 # -*- coding: utf-8 -*-
 
@@ -12,184 +12,245 @@ from datasette import hookimpl
 from datasette.utils.asgi import Response
 
 
-# This file is used ONLY to seed the DB the first time.
-BASE_DIR = os.path.dirname(os.path.dirname(__file__))  # project root
-FARMACI_JSON = os.path.join(BASE_DIR, "static", "custom", "pillole_farmaci.json")
+# Root del progetto (parent della cartella plugins)
+BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 
-PILLOLE_JS = os.path.join(BASE_DIR, "static", "custom", "pillole.js")
+# Nel tuo repo il seed sta qui:
+SEED_JSON_CANDIDATES = [
+    os.path.join(BASE_DIR, "static", "custom", "pillole_farmaci.json"),
+    # fallback (se in futuro lo sposti)
+    os.path.join(BASE_DIR, "data", "pillole_farmaci.json"),
+]
 
-DB_NAME = "output"  # derived from output.db
-
-# Hard timeout (seconds) to avoid hanging UI if SQLite is locked/busy
-DB_OP_TIMEOUT = 2.5
+# Keep DB ops from hanging the UI forever (locked DB, missing table, etc.)
+DB_OP_TIMEOUT = 2.0
 
 
-
-def _utc_now_iso_no_ms():
-    # SQLite + JS friendly ISO without milliseconds, UTC
+def _now_iso():
+    # Store UTC ISO8601 with Z
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
-async def _ensure_tables(db):
-    await db.execute_write(
+def _load_farmaci_seed_from_json():
+    """
+    Returns list like:
+        [{"farmaco":"duloxetina","dose_default":90}, ...]
+    Safe fallback to [].
+    """
+    for path in SEED_JSON_CANDIDATES:
+        try:
+            if not os.path.exists(path):
+                continue
+            with open(path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+
+            if not isinstance(data, list):
+                continue
+
+            out = []
+            for x in data:
+                if isinstance(x, dict) and "farmaco" in x:
+                    out.append(
+                        {
+                            "farmaco": str(x.get("farmaco") or "").strip(),
+                            "dose_default": x.get("dose_default", None),
+                        }
+                    )
+            out = [x for x in out if x["farmaco"]]
+            if out:
+                return out
+        except Exception:
+            # prova il prossimo candidate
+            pass
+    return []
+
+
+async def _get_db(datasette):
+    # Prefer "output" if exists, else use first DB
+    try:
+        return datasette.get_database("output")
+    except Exception:
+        return datasette.get_database()
+
+
+async def _ensure_tables(datasette):
+    """
+    Create tables if missing. Should run once at startup.
+    """
+    db = await _get_db(datasette)
+
+    async def _exec(sql):
+        return await asyncio.wait_for(db.execute_write(sql), timeout=DB_OP_TIMEOUT)
+
+    await _exec(
         """
         CREATE TABLE IF NOT EXISTS pillole (
-            id INTEGER PRIMARY KEY,
             quando TEXT NOT NULL,
             farmaco TEXT NOT NULL,
-            dose TEXT
+            dose REAL
         )
         """
     )
-    await db.execute_write(
-        "CREATE INDEX IF NOT EXISTS idx_pillole_quando ON pillole(quando)"
-    )
-    await db.execute_write(
+    await _exec("CREATE INDEX IF NOT EXISTS idx_pillole_quando ON pillole(quando)")
+    await _exec("CREATE INDEX IF NOT EXISTS idx_pillole_farmaco ON pillole(farmaco)")
+
+    await _exec(
         """
         CREATE TABLE IF NOT EXISTS pillole_farmaci (
             farmaco TEXT PRIMARY KEY,
-            dose_default TEXT
+            dose_default REAL
         )
         """
     )
 
 
-def _load_farmaci_seed_from_json():
-    try:
-        with open(FARMACI_JSON, "r", encoding="utf-8") as f:
-            data = json.load(f)
-        items = data.get("items") or []
-        out = []
-        for it in items:
-            farmaco = (it.get("farmaco") or "").strip()
-            if not farmaco:
-                continue
-            out.append(
-                {
-                    "farmaco": farmaco,
-                    "dose_default": (it.get("dose_default") or "").strip(),
-                }
-            )
-        return out
-    except Exception:
-        return []
-
-
-async def _seed_farmaci_if_needed(db):
-    # Seed only once: if table empty.
-    row = await db.execute("SELECT COUNT(*) AS c FROM pillole_farmaci")
-    if (row.first() or {}).get("c", 0) > 0:
-        return
+async def _seed_farmaci_defaults(datasette):
+    """
+    Seed the defaults table in sqlite so UI can render quickly even without seed JSON later.
+    """
+    db = await _get_db(datasette)
 
     seed = _load_farmaci_seed_from_json()
     if not seed:
         return
 
-    def _do(conn):
-        conn.executemany(
-            "INSERT OR REPLACE INTO pillole_farmaci(farmaco, dose_default) VALUES (?, ?)",
-            [(x["farmaco"], x.get("dose_default", "")) for x in seed],
-        )
+    for x in seed:
+        farmaco = x["farmaco"]
+        dose_default = x.get("dose_default", None)
+        try:
+            await asyncio.wait_for(
+                db.execute_write(
+                    """
+                    INSERT INTO pillole_farmaci (farmaco, dose_default)
+                    VALUES (?, ?)
+                    ON CONFLICT(farmaco) DO UPDATE SET dose_default=excluded.dose_default
+                    """,
+                    [farmaco, dose_default],
+                ),
+                timeout=DB_OP_TIMEOUT,
+            )
+        except Exception:
+            pass
 
-    await db.execute_write_fn(_do)
 
-
-async def _load_farmaci_from_db(db):
-    res = await db.execute(
-        "SELECT farmaco, COALESCE(dose_default,'') AS dose_default FROM pillole_farmaci ORDER BY lower(farmaco)"
-    )
-    return list(res.rows)
-
-
-async def _get_db(datasette):
-    # Prefer output DB; fall back to default if name differs
+async def _cache_farmaci_list(datasette):
+    """
+    Populate datasette._pillole_farmaci so templates can render quickly without hitting DB.
+    """
+    db = await _get_db(datasette)
     try:
-        return datasette.get_database(DB_NAME)
+        res = await asyncio.wait_for(
+            db.execute(
+                """
+                SELECT farmaco, dose_default
+                FROM pillole_farmaci
+                ORDER BY farmaco
+                """
+            ),
+            timeout=DB_OP_TIMEOUT,
+        )
+        rows = [dict(r) for r in res.rows]
+        if rows:
+            datasette._pillole_farmaci = rows
+            return
     except Exception:
-        return datasette.get_database()
+        pass
+
+    # fallback seed
+    datasette._pillole_farmaci = _load_farmaci_seed_from_json()
 
 
 @hookimpl
-async def startup(datasette):
-    # Non-blocking startup: never do DB writes that could hang the server.
-    async def _bg():
+def startup(datasette):
+    async def inner():
         try:
-            db = await _get_db(datasette)
-            await _ensure_tables(db)
-            await _seed_farmaci_if_needed(db)
-            datasette._pillole_farmaci = await _load_farmaci_from_db(db)  # type: ignore[attr-defined]
-        except Exception as e:
-            # Don't crash Datasette if seeding fails; log and continue.
-            try:
-                datasette.logger.exception("pillole_ui startup background task failed")
-            except Exception:
-                pass
+            await _ensure_tables(datasette)
+            await _seed_farmaci_defaults(datasette)
+            await _cache_farmaci_list(datasette)
+        except Exception:
+            pass
 
+    return inner
+
+
+def _coerce_dose(value):
+    if value is None:
+        return None
+    if isinstance(value, (int, float)):
+        return float(value)
+    s = str(value).strip()
+    if not s:
+        return None
     try:
-        asyncio.create_task(_bg())
+        return float(s.replace(",", "."))
     except Exception:
-        # If no running loop, just skip seeding; it will happen lazily on first request.
-        pass
+        return None
 
-
-
-PILLOLE_JS = os.path.join(BASE_DIR, "static", "custom", "pillole.js")
-
-
-async def pillole_js(request, datasette):
-    try:
-        with open(PILLOLE_JS, "r", encoding="utf-8") as f:
-            body = f.read()
-    except Exception:
-        body = "// pillole.js missing\n"
-    return Response.text(body, headers={"content-type": "application/javascript; charset=utf-8"})
 
 async def pillole_add(request, datasette):
+    """
+    POST /-/pillole/add
+    Body JSON:
+      {"farmaco":"duloxetina", "dose":90, "quando": "...optional..."}
+
+    If quando omitted -> now UTC.
+    """
     if request.method != "POST":
-        return Response.text("Method Not Allowed", status=405)
+        return Response.json({"ok": False, "error": "POST only"}, status=405)
+
+    try:
+        body = await request.post_body()
+        payload = json.loads(body.decode("utf-8")) if body else {}
+    except Exception:
+        return Response.json({"ok": False, "error": "Invalid JSON"}, status=400)
+
+    farmaco = str(payload.get("farmaco") or "").strip()
+    if not farmaco:
+        return Response.json({"ok": False, "error": "Missing farmaco"}, status=400)
+
+    dose = _coerce_dose(payload.get("dose", None))
+    quando = str(payload.get("quando") or "").strip() or _now_iso()
 
     db = await _get_db(datasette)
 
-    # Datasette 0.65.x Request does not expose a raw body helper we can rely on across versions.
-    # To avoid "403 Unknown content-type", the frontend posts as application/x-www-form-urlencoded,
-    # so we can always parse via post_vars().
     try:
-        form = await request.post_vars()
-    except Exception as e:
-        return Response.json({"ok": False, "error": f"bad request: {e!s}"}, status=400)
-
-    farmaco = (form.get("farmaco") or "").strip()
-    dose_val = form.get("dose", None)
-
-    if not farmaco:
-        return Response.json({"ok": False, "error": "farmaco missing"}, status=400)
-
-    dose = "" if dose_val is None else str(dose_val).strip()
-    quando = _utc_now_iso_no_ms()
-
-    async def _insert_once():
-        await db.execute_write(
-            "INSERT INTO pillole(quando, farmaco, dose) VALUES (?, ?, ?)",
-            [quando, farmaco, dose],
+        await asyncio.wait_for(
+            db.execute_write(
+                "INSERT INTO pillole (quando, farmaco, dose) VALUES (?, ?, ?)",
+                [quando, farmaco, dose],
+            ),
+            timeout=DB_OP_TIMEOUT,
         )
-
-    # Try insert; if table missing on a fresh DB, create it once and retry.
-    try:
-        await asyncio.wait_for(_insert_once(), timeout=DB_OP_TIMEOUT)
     except sqlite3.OperationalError as e:
-        msg = str(e).lower()
-        if "no such table" in msg:
-            try:
-                await asyncio.wait_for(_ensure_tables(db), timeout=DB_OP_TIMEOUT)
-                await asyncio.wait_for(_insert_once(), timeout=DB_OP_TIMEOUT)
-            except Exception:
-                return Response.json({"ok": False, "error": "db busy/locked (ensure/insert)"}, status=503)
-        else:
-            return Response.json({"ok": False, "error": f"db error: {e!s}"}, status=500)
-    except Exception:
-        return Response.json({"ok": False, "error": "db busy/locked (insert)"}, status=503)
+        return Response.json({"ok": False, "error": str(e)}, status=500)
+    except Exception as e:
+        return Response.json({"ok": False, "error": str(e)}, status=500)
 
-    return Response.json({"ok": True, "row": {"quando": quando, "farmaco": farmaco, "dose": dose}})
+    return Response.json({"ok": True, "quando": quando, "farmaco": farmaco, "dose": dose})
+
+
+async def pillole_defaults(request, datasette):
+    """
+    GET /-/pillole/defaults.json
+    """
+    db = await _get_db(datasette)
+    try:
+        res = await asyncio.wait_for(
+            db.execute(
+                """
+                SELECT farmaco, dose_default
+                FROM pillole_farmaci
+                ORDER BY farmaco
+                """
+            ),
+            timeout=DB_OP_TIMEOUT,
+        )
+        rows = [dict(r) for r in res.rows]
+        if not rows:
+            rows = _load_farmaci_seed_from_json()
+    except Exception:
+        rows = _load_farmaci_seed_from_json()
+    return Response.json({"ok": True, "rows": rows})
 
 
 async def pillole_recent(request, datasette):
@@ -200,9 +261,6 @@ async def pillole_recent(request, datasette):
         limit = 30
     limit = max(1, min(limit, 500))
 
-    # IMPORTANT: never do DB writes on this GET endpoint.
-    # If tables are missing (first run) or the DB is busy/locked,
-    # return an empty result rather than hanging.
     try:
         res = await asyncio.wait_for(
             db.execute(
@@ -216,17 +274,31 @@ async def pillole_recent(request, datasette):
             ),
             timeout=DB_OP_TIMEOUT,
         )
-        rows = list(res.rows)
-    except Exception as e:
-        # Don't hang the UI: return empty rows but also include a hint for debugging.
+        # Row -> dict (fix del 500 JSON)
+        rows = [dict(r) for r in res.rows]
+    except Exception:
         rows = []
     return Response.json({"ok": True, "rows": rows})
+
+
+async def pillole_js(request, datasette):
+    """
+    Serve custom JS (pillole.js) from static/custom if present, else fallback.
+    """
+    static_path = os.path.join(BASE_DIR, "static", "custom", "pillole.js")
+    try:
+        with open(static_path, "r", encoding="utf-8") as f:
+            body = f.read()
+    except Exception:
+        body = "// pillole.js not found"
+    return Response.text(body, content_type="application/javascript; charset=utf-8")
 
 
 @hookimpl
 def register_routes():
     return [
         (r"^/-/pillole/add$", pillole_add),
+        (r"^/-/pillole/defaults\.json$", pillole_defaults),
         (r"^/-/pillole/recent\.json$", pillole_recent),
         (r"^/-/pillole/pillole\.js$", pillole_js),
     ]
@@ -234,11 +306,9 @@ def register_routes():
 
 @hookimpl
 def extra_template_vars(datasette):
-    # Prefer cached DB-backed list (populated by background startup task).
     cached = getattr(datasette, "_pillole_farmaci", None)
     if cached is not None:
         return {"pillole_farmaci": cached}
 
-    # Fallback: show seed list even if DB seeding hasn't happened yet.
     seed = _load_farmaci_seed_from_json()
     return {"pillole_farmaci": seed}
