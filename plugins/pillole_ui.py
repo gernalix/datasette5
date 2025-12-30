@@ -1,4 +1,4 @@
-# v8
+# v9
 # plugins/pillole_ui.py
 # -*- coding: utf-8 -*-
 
@@ -18,6 +18,10 @@ FARMACI_JSON = os.path.join(BASE_DIR, "static", "custom", "pillole_farmaci.json"
 PILLOLE_JS = os.path.join(BASE_DIR, "static", "custom", "pillole.js")
 
 DB_NAME = "output"  # derived from output.db
+
+# Hard timeout (seconds) to avoid hanging UI if SQLite is locked/busy
+DB_OP_TIMEOUT = 2.5
+
 
 
 def _utc_now_iso_no_ms():
@@ -144,7 +148,10 @@ async def pillole_add(request, datasette):
         return Response.text("Method Not Allowed", status=405)
 
     db = await _get_db(datasette)
-    await _ensure_tables(db)
+    try:
+        await asyncio.wait_for(_ensure_tables(db), timeout=DB_OP_TIMEOUT)
+    except Exception:
+        return Response.json({"ok": False, "error": "db busy/locked (ensure_tables)"}, status=503)
 
     farmaco = ""
     dose = ""
@@ -163,10 +170,16 @@ async def pillole_add(request, datasette):
 
     quando = _utc_now_iso_no_ms()
 
-    await db.execute_write(
-        "INSERT INTO pillole(quando, farmaco, dose) VALUES (?, ?, ?)",
-        [quando, farmaco, dose],
-    )
+    try:
+        await asyncio.wait_for(
+            db.execute_write(
+                "INSERT INTO pillole(quando, farmaco, dose) VALUES (?, ?, ?)",
+                [quando, farmaco, dose],
+            ),
+            timeout=DB_OP_TIMEOUT,
+        )
+    except Exception:
+        return Response.json({"ok": False, "error": "db busy/locked (insert)"}, status=503)
     return Response.json({"ok": True, "row": {"quando": quando, "farmaco": farmaco, "dose": dose}})
 
 
@@ -182,17 +195,21 @@ async def pillole_recent(request, datasette):
     # If tables are missing (first run) or the DB is busy/locked,
     # return an empty result rather than hanging.
     try:
-        res = await db.execute(
-            """
-            SELECT quando, farmaco, dose
-            FROM pillole
-            ORDER BY quando DESC
-            LIMIT ?
-            """,
-            [limit],
+        res = await asyncio.wait_for(
+            db.execute(
+                """
+                SELECT quando, farmaco, dose
+                FROM pillole
+                ORDER BY quando DESC
+                LIMIT ?
+                """,
+                [limit],
+            ),
+            timeout=DB_OP_TIMEOUT,
         )
         rows = list(res.rows)
-    except Exception:
+    except Exception as e:
+        # Don't hang the UI: return empty rows but also include a hint for debugging.
         rows = []
     return Response.json({"ok": True, "rows": rows})
 
