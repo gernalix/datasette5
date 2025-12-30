@@ -1,4 +1,4 @@
-// pillole.js v10
+// pillole.js v11
 // Fix definitivo: CSRF via meta + POST form-urlencoded (compatibile con Datasette 0.65.x) + rows=[]
 
 (() => {
@@ -148,8 +148,14 @@
     });
   }
 
-  document.addEventListener("DOMContentLoaded", () => {
+    function init() {
     bindButtons();
     refresh();
-  });
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", init);
+  } else {
+    init();
+  }
 })();
