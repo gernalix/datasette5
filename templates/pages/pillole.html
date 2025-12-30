@@ -3,6 +3,9 @@
 {% block title %}pillole{% endblock %}
 
 {% block content %}
+<!-- CSRF token per POST JS -->
+<meta name="ds-csrftoken" content="{{ csrftoken() }}">
+
 <style>
   /* v1 */
   .pillole-grid{
@@ -74,10 +77,17 @@
 
 <div class="pillole-grid">
   {% for it in pillole_farmaci %}
-    <div class="pillole-card" data-pillole-card data-farmaco="{{ it.farmaco }}" data-dose-default="{{ it.dose_default }}">
+    <div class="pillole-card"
+         data-pillole-card
+         data-farmaco="{{ it.farmaco }}"
+         data-dose-default="{{ it.dose_default }}">
       <h3>{{ it.farmaco }}</h3>
       <div class="pillole-sub">
-        {% if it.dose_default %}Dose default: <strong>{{ it.dose_default }}</strong>{% else %}Dose default: —{% endif %}
+        {% if it.dose_default %}
+          Dose default: <strong>{{ it.dose_default }}</strong>
+        {% else %}
+          Dose default: —
+        {% endif %}
       </div>
       <div class="pillole-actions">
         <button type="button" title="Inserisci dose default (now)" data-action="quick">⚡</button>
@@ -85,7 +95,11 @@
       </div>
 
       <div class="pillole-dosebox" data-dose-box hidden>
-        <input type="text" inputmode="decimal" autocomplete="off" data-dose-input placeholder="Dose" />
+        <input type="text"
+               inputmode="decimal"
+               autocomplete="off"
+               data-dose-input
+               placeholder="Dose" />
       </div>
     </div>
   {% endfor %}
@@ -101,14 +115,18 @@
     </tr>
   </thead>
   <tbody>
-    <tr><td colspan="3" style="opacity:.65">caricamento…</td></tr>
+    <tr>
+      <td colspan="3" style="opacity:.65">caricamento…</td>
+    </tr>
   </tbody>
 </table>
 
-<script id="pillole-urls" type="application/json">{
+<script id="pillole-urls" type="application/json">
+{
   "add": "{{ urls.path('/-/pillole/add') }}",
   "recent": "{{ urls.path('/-/pillole/recent.json') }}"
-}</script>
+}
+</script>
 
 <script src="{{ urls.path('/-/pillole/pillole.js') }}?v=8"></script>
 {% endblock %}

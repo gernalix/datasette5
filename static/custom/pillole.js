@@ -1,5 +1,5 @@
-// pillole.js v9
-// Fix: supporta CSRF Datasette per POST + messaggio errore utile + rows=[].
+// pillole.js v10
+// Fix definitivo: CSRF via meta + POST form-urlencoded (compatibile con Datasette 0.65.x) + rows=[]
 
 (() => {
   function qs(sel, root = document) {
@@ -8,13 +8,15 @@
   function qsa(sel, root = document) {
     return Array.from(root.querySelectorAll(sel));
   }
-  function getCookie(name) {
-    const m = document.cookie.match(new RegExp('(?:^|; )' + name.replace(/[$()*+.?[\]^{|}]/g, '\\$&') + '=([^;]*)'));
-    return m ? decodeURIComponent(m[1]) : "";
-  }
 
+  // URL relative: base_url-safe
   const URL_RECENT = "./-/pillole/recent.json";
   const URL_ADD = "./-/pillole/add";
+
+  function getCsrfToken() {
+    const el = document.querySelector('meta[name="ds-csrftoken"]');
+    return el ? (el.getAttribute("content") || "") : "";
+  }
 
   async function apiGet(url) {
     const r = await fetch(url, { credentials: "same-origin" });
@@ -25,17 +27,25 @@
     return r.json();
   }
 
-  async function apiPost(url, body) {
-    const csrftoken = getCookie("ds_csrftoken") || getCookie("csrftoken");
+  async function apiPostForm(url, fields) {
+    const token = getCsrfToken();
+    const headers = {};
+    if (token) headers["x-csrftoken"] = token;
+
+    // Usa application/x-www-form-urlencoded: Datasette 0.65.x lo gestisce via request.post_vars()
+    const body = new URLSearchParams();
+    for (const [k, v] of Object.entries(fields)) {
+      if (v === undefined || v === null) continue;
+      body.set(k, String(v));
+    }
+
     const r = await fetch(url, {
       method: "POST",
       credentials: "same-origin",
-      headers: {
-        "Content-Type": "application/json",
-        ...(csrftoken ? { "x-csrftoken": csrftoken } : {}),
-      },
-      body: JSON.stringify(body),
+      headers,
+      body,
     });
+
     if (!r.ok) {
       const t = await r.text().catch(() => "");
       throw new Error(`POST ${url} → ${r.status} ${t.slice(0, 200)}`);
@@ -46,11 +56,14 @@
   async function refresh() {
     const table = qs("#pillole-recent");
     if (!table) return;
+
     const tbody = qs("tbody", table);
     if (!tbody) return;
 
     tbody.innerHTML = `
-      <tr><td colspan="3" style="opacity:.65; cursor:pointer">caricamento…</td></tr>
+      <tr>
+        <td colspan="3" style="opacity:.65; cursor:pointer">caricamento…</td>
+      </tr>
     `;
 
     let data;
@@ -59,19 +72,26 @@
     } catch (e) {
       console.error(e);
       tbody.innerHTML = `
-        <tr><td colspan="3" style="opacity:.85; color:#b00">errore caricamento</td></tr>
+        <tr>
+          <td colspan="3" style="opacity:.85; color:#b00">${String(e.message || e)}</td>
+        </tr>
       `;
       return;
     }
 
     const rows = (data && Array.isArray(data.rows)) ? data.rows : [];
+
+    // ✅ tabella vuota
     if (rows.length === 0) {
       tbody.innerHTML = `
-        <tr><td colspan="3" style="opacity:.6">nessuna entry</td></tr>
+        <tr>
+          <td colspan="3" style="opacity:.6">nessuna entry</td>
+        </tr>
       `;
       return;
     }
 
+    // render righe
     tbody.innerHTML = "";
     for (const r of rows) {
       const tr = document.createElement("tr");
@@ -103,19 +123,26 @@
         const farmaco = card.dataset.farmaco;
         const action = btn.dataset.action;
 
-        let dose = null;
-        if (action === "plus") {
+        let dose = "";
+        if (action === "quick") {
+          dose = card.dataset.doseDefault || "";
+        } else if (action === "plus") {
+          const box = qs("[data-dose-box]", card);
           const input = qs("[data-dose-input]", card);
-          const v = input && input.value != null ? String(input.value).trim() : "";
-          dose = v === "" ? null : Number(v);
+          if (box && box.hasAttribute("hidden")) {
+            box.removeAttribute("hidden");
+            input && input.focus();
+            return;
+          }
+          dose = input && input.value ? String(input.value).trim() : "";
         }
 
         try {
-          await apiPost(URL_ADD, { farmaco, dose });
+          await apiPostForm(URL_ADD, { farmaco, dose });
           await refresh();
         } catch (e) {
           console.error(e);
-          alert(`Errore inserimento\n${e.message}`);
+          alert(String(e.message || e));
         }
       });
     });
