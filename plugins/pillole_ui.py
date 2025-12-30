@@ -1,10 +1,11 @@
-# v5
+# v6
 # plugins/pillole_ui.py
 # -*- coding: utf-8 -*-
 
 import json
 import os
 from datetime import datetime, timezone
+import asyncio
 
 from datasette import hookimpl
 from datasette.utils.asgi import Response
@@ -105,11 +106,25 @@ async def _get_db(datasette):
 
 @hookimpl
 async def startup(datasette):
-    db = await _get_db(datasette)
-    await _ensure_tables(db)
-    await _seed_farmaci_if_needed(db)
-    # Cache for templates: no more file reads after startup
-    datasette._pillole_farmaci = await _load_farmaci_from_db(db)  # type: ignore[attr-defined]
+    # Non-blocking startup: never do DB writes that could hang the server.
+    async def _bg():
+        try:
+            db = await _get_db(datasette)
+            await _ensure_tables(db)
+            await _seed_farmaci_if_needed(db)
+            datasette._pillole_farmaci = await _load_farmaci_from_db(db)  # type: ignore[attr-defined]
+        except Exception as e:
+            # Don't crash Datasette if seeding fails; log and continue.
+            try:
+                datasette.logger.exception("pillole_ui startup background task failed")
+            except Exception:
+                pass
+
+    try:
+        asyncio.create_task(_bg())
+    except Exception:
+        # If no running loop, just skip seeding; it will happen lazily on first request.
+        pass
 
 
 
@@ -188,5 +203,11 @@ def register_routes():
 
 @hookimpl
 def extra_template_vars(datasette):
-    # Templates read from in-memory cache; no need to read CSV/JSON anymore after startup.
-    return {"pillole_farmaci": getattr(datasette, "_pillole_farmaci", [])}
+    # Prefer cached DB-backed list (populated by background startup task).
+    cached = getattr(datasette, "_pillole_farmaci", None)
+    if cached is not None:
+        return {"pillole_farmaci": cached}
+
+    # Fallback: show seed list even if DB seeding hasn't happened yet.
+    seed = _load_farmaci_seed_from_json()
+    return {"pillole_farmaci": seed}
