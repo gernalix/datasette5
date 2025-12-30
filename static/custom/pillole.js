@@ -1,5 +1,5 @@
-// pillole.js v8
-// Fix: niente "caricamento…" infinito (gestisce rows=[] e errori). Usa URL relative (base_url-safe).
+// pillole.js v9
+// Fix: supporta CSRF Datasette per POST + messaggio errore utile + rows=[].
 
 (() => {
   function qs(sel, root = document) {
@@ -8,39 +8,49 @@
   function qsa(sel, root = document) {
     return Array.from(root.querySelectorAll(sel));
   }
+  function getCookie(name) {
+    const m = document.cookie.match(new RegExp('(?:^|; )' + name.replace(/[$()*+.?[\]^{|}]/g, '\\$&') + '=([^;]*)'));
+    return m ? decodeURIComponent(m[1]) : "";
+  }
 
-  // URL relative: funzionano sia con base_url "/" sia con base_url "/qualcosa/"
   const URL_RECENT = "./-/pillole/recent.json";
   const URL_ADD = "./-/pillole/add";
 
   async function apiGet(url) {
     const r = await fetch(url, { credentials: "same-origin" });
-    if (!r.ok) throw new Error(`GET ${url} → ${r.status}`);
+    if (!r.ok) {
+      const t = await r.text().catch(() => "");
+      throw new Error(`GET ${url} → ${r.status} ${t.slice(0, 200)}`);
+    }
     return r.json();
   }
 
   async function apiPost(url, body) {
+    const csrftoken = getCookie("ds_csrftoken") || getCookie("csrftoken");
     const r = await fetch(url, {
       method: "POST",
       credentials: "same-origin",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        ...(csrftoken ? { "x-csrftoken": csrftoken } : {}),
+      },
       body: JSON.stringify(body),
     });
-    if (!r.ok) throw new Error(`POST ${url} → ${r.status}`);
+    if (!r.ok) {
+      const t = await r.text().catch(() => "");
+      throw new Error(`POST ${url} → ${r.status} ${t.slice(0, 200)}`);
+    }
     return r.json();
   }
 
   async function refresh() {
     const table = qs("#pillole-recent");
     if (!table) return;
-
     const tbody = qs("tbody", table);
     if (!tbody) return;
 
     tbody.innerHTML = `
-      <tr>
-        <td colspan="3" style="opacity:.65; cursor:pointer">caricamento…</td>
-      </tr>
+      <tr><td colspan="3" style="opacity:.65; cursor:pointer">caricamento…</td></tr>
     `;
 
     let data;
@@ -49,22 +59,15 @@
     } catch (e) {
       console.error(e);
       tbody.innerHTML = `
-        <tr>
-          <td colspan="3" style="opacity:.85; color:#b00">
-            errore caricamento
-          </td>
-        </tr>
+        <tr><td colspan="3" style="opacity:.85; color:#b00">errore caricamento</td></tr>
       `;
       return;
     }
 
     const rows = (data && Array.isArray(data.rows)) ? data.rows : [];
-
     if (rows.length === 0) {
       tbody.innerHTML = `
-        <tr>
-          <td colspan="3" style="opacity:.6">nessuna entry</td>
-        </tr>
+        <tr><td colspan="3" style="opacity:.6">nessuna entry</td></tr>
       `;
       return;
     }
@@ -112,7 +115,7 @@
           await refresh();
         } catch (e) {
           console.error(e);
-          alert("Errore inserimento");
+          alert(`Errore inserimento\n${e.message}`);
         }
       });
     });

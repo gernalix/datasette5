@@ -1,4 +1,4 @@
-# v10
+# v11
 # plugins/pillole_ui.py
 # -*- coding: utf-8 -*-
 
@@ -150,19 +150,36 @@ async def pillole_add(request, datasette):
 
     db = await _get_db(datasette)
 
-    # Parse input (accept JSON or form). Dose may be number/null; normalize to string.
+    # Parse input robustly: accept JSON even if Content-Type is wrong/missing.
+    # Some Datasette versions raise 403 'Unknown content-type' from post_vars() if Content-Type
+    # is not a supported form type. To avoid that, we try JSON from raw body first, then fallback
+    # to form parsing only if it looks like form data.
     farmaco = ""
     dose_val = None
     try:
-        ct = request.headers.get("content-type", "") or ""
-        if "application/json" in ct:
-            data = await request.json()
+        raw = await request.body()
+        raw_s = raw.decode("utf-8", errors="replace").strip() if raw else ""
+
+        data = None
+        # First try JSON regardless of Content-Type
+        if raw_s:
+            try:
+                data = json.loads(raw_s)
+            except Exception:
+                data = None
+
+        if isinstance(data, dict):
             farmaco = (data.get("farmaco") or "").strip()
             dose_val = data.get("dose", None)
         else:
-            form = await request.post_vars()
-            farmaco = (form.get("farmaco") or "").strip()
-            dose_val = form.get("dose", None)
+            # Fallback: try form vars only if Content-Type indicates a form
+            ct = (request.headers.get("content-type", "") or "").lower()
+            if "application/x-www-form-urlencoded" in ct or "multipart/form-data" in ct:
+                form = await request.post_vars()
+                farmaco = (form.get("farmaco") or "").strip()
+                dose_val = form.get("dose", None)
+            else:
+                return Response.json({"ok": False, "error": "unsupported content-type"}, status=415)
     except Exception as e:
         return Response.json({"ok": False, "error": f"bad request: {e!s}"}, status=400)
 
