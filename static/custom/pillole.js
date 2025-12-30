@@ -1,28 +1,109 @@
-// v14
+// v18
 // static/custom/pillole.js
-// CSRF fix (Datasette): support both 'ds_csrftoken' and 'csrftoken' cookies,
-// and send token as BOTH header and form field(s).
-// Robust init + basic UX feedback
+// Pillole UI: robust POST + visible debug log, no AbortController.
 
-(() => {
-  function qs(sel, root = document) { return root.querySelector(sel); }
-  function qsa(sel, root = document) { return Array.from(root.querySelectorAll(sel)); }
+(function () {
+  "use strict";
 
-  function readUrls() {
-    const el = qs("#pillole-urls");
-    if (!el) return { add: "./-/pillole/add", recent: "./-/pillole/recent.json" };
-    try {
-      const obj = JSON.parse(el.textContent || "{}");
-      return {
-        add: obj.add || "./-/pillole/add",
-        recent: obj.recent || "./-/pillole/recent.json",
-      };
-    } catch {
-      return { add: "./-/pillole/add", recent: "./-/pillole/recent.json" };
+  function $(sel, root) { return (root || document).querySelector(sel); }
+  function $all(sel, root) { return Array.from((root || document).querySelectorAll(sel)); }
+
+  function ts() {
+    try { return new Date().toISOString().replace("T"," ").replace("Z",""); } catch(e){ return ""; }
+  }
+
+  function getUrls() {
+    const el = document.getElementById("pillole-urls");
+    if (!el) return null;
+    try { return JSON.parse(el.textContent || "{}"); } catch (e) { return null; }
+  }
+
+  function readCookie(name) {
+    const m = document.cookie.match(new RegExp("(^|;\s*)" + name.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&") + "=([^;]+)"));
+    return m ? decodeURIComponent(m[2]) : null;
+  }
+
+  function readCsrf() {
+    // Datasette commonly uses ds_csrftoken cookie + hidden form field / meta tags
+    return (
+      readCookie("ds_csrftoken") ||
+      readCookie("csrftoken") ||
+      (document.querySelector('meta[name="csrf-token"]') && document.querySelector('meta[name="csrf-token"]').getAttribute("content")) ||
+      (document.querySelector('meta[name="ds-csrftoken"]') && document.querySelector('meta[name="ds-csrftoken"]').getAttribute("content")) ||
+      null
+    );
+  }
+
+  function ensureDebug() {
+    let wrap = document.getElementById("pillole-debug");
+    if (!wrap) return null;
+    let pre = wrap.querySelector("pre");
+    return pre || null;
+  }
+
+  function log(line) {
+    const pre = ensureDebug();
+    const s = `${ts()} — ${line}`;
+    if (pre) {
+      pre.textContent = (s + "\n") + pre.textContent;
+    }
+    // also to console
+    try { console.log("[pillole]", line); } catch(e) {}
+  }
+
+  function showCardError(card, msg) {
+    let box = card.querySelector("[data-error]");
+    if (!box) {
+      box = document.createElement("div");
+      box.setAttribute("data-error", "1");
+      box.style.marginTop = "10px";
+      box.style.padding = "10px 12px";
+      box.style.border = "1px solid rgba(220, 53, 69, .35)";
+      box.style.background = "rgba(220, 53, 69, .06)";
+      box.style.color = "#b02a37";
+      box.style.borderRadius = "10px";
+      card.appendChild(box);
+    }
+    box.textContent = msg;
+    box.hidden = false;
+  }
+
+  function clearCardError(card) {
+    const box = card.querySelector("[data-error]");
+    if (box) box.hidden = true;
+  }
+
+  function setBusy(btn, busy) {
+    if (!btn) return;
+    if (busy) {
+      btn.dataset._orig = btn.textContent;
+      btn.textContent = "...";
+      btn.disabled = true;
+    } else {
+      btn.textContent = btn.dataset._orig || btn.textContent;
+      btn.disabled = false;
     }
   }
 
-  const URLS = readUrls();
+  function renderRecent(rows) {
+    const tbody = $("#pillole-recent tbody");
+    if (!tbody) return;
+    tbody.innerHTML = "";
+    if (!rows || !rows.length) {
+      const tr = document.createElement("tr");
+      tr.innerHTML = '<td colspan="3" style="opacity:.65">nessuna entry</td>';
+      tbody.appendChild(tr);
+      return;
+    }
+    for (const r of rows) {
+      const tr = document.createElement("tr");
+      const quando = (r.quando ?? "").toString();
+      const farmaco = (r.farmaco ?? "").toString();
+      const dose = (r.dose === null || r.dose === undefined) ? "" : r.dose.toString();
+      tr.innerHTML = `<td>${escapeHtml(quando)}</td><td>${escapeHtml(farmaco)}</td><td>${escapeHtml(dose)}</td>`;
+      tbody.appendChild(tr);
+    }
+  }
 
   function escapeHtml(s) {
     return String(s)
@@ -33,154 +114,130 @@
       .replaceAll("'", "&#039;");
   }
 
-  function getCookie(name) {
-    const esc = name.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&");
-    const m = document.cookie.match(new RegExp("(^|;\s*)" + esc + "=([^;]*)"));
-    return m ? decodeURIComponent(m[2]) : "";
-  }
-
-  function getCsrfToken() {
-    // Datasette commonly uses ds_csrftoken
-    const a = getCookie("ds_csrftoken");
-    if (a) return { token: a, cookieName: "ds_csrftoken" };
-
-    // Some installs/plugins might use csrftoken
-    const b = getCookie("csrftoken");
-    if (b) return { token: b, cookieName: "csrftoken" };
-
-    // Fallbacks if present in page
-    const m = qs('meta[name="csrf-token"]');
-    if (m && m.getAttribute("content")) return { token: m.getAttribute("content"), cookieName: "" };
-
-    const hidden = qs('input[name="csrftoken"], input[name="ds_csrftoken"]');
-    if (hidden && hidden.value) return { token: hidden.value, cookieName: "" };
-
-    return { token: "", cookieName: "" };
-  }
-
-  function setBusy(btn, busy) {
-    if (!btn) return;
-    if (busy) {
-      if (!btn.dataset._oldText) btn.dataset._oldText = btn.textContent || "";
-      btn.textContent = "…";
-      btn.disabled = true;
-    } else {
-      if (btn.dataset._oldText) btn.textContent = btn.dataset._oldText;
-      btn.disabled = false;
+  async function fetchRecent(urls) {
+    try {
+      log(`GET recent → ${urls.recent}`);
+      const r = await fetch(urls.recent, { credentials: "same-origin", cache: "no-store" });
+      const ct = (r.headers.get("content-type") || "").toLowerCase();
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      if (!ct.includes("application/json")) {
+        const t = await r.text();
+        throw new Error(`recent non-JSON (${ct}): ${t.slice(0, 160)}`);
+      }
+      const j = await r.json();
+      renderRecent(j.rows || []);
+    } catch (e) {
+      log(`ERRORE recent: ${e && e.message ? e.message : String(e)}`);
     }
   }
 
-  async function apiPostForm(url, fields) {
-    const { token } = getCsrfToken();
-    const headers = {};
-    if (token) headers["x-csrftoken"] = token;
+  async function postAdd(urls, farmaco, dose) {
+    const csrf = readCsrf();
+    const payload = { farmaco: farmaco, dose: dose };
+    const headers = { "content-type": "application/json" };
+    if (csrf) headers["x-csrftoken"] = csrf;
 
-    const body = new URLSearchParams();
+    log(`POST → ${urls.add} farmaco=${farmaco} dose=${dose} csrf=${csrf ? "ok" : "no"}`);
 
-    // Datasette checks "POST field did not match cookie" — depending on cookie name.
-    // Send both, harmless if one is ignored.
-    if (token) {
-      body.set("csrftoken", token);
-      body.set("ds_csrftoken", token);
-    }
-
-    for (const [k, v] of Object.entries(fields)) {
-      if (v === undefined || v === null) continue;
-      body.set(k, String(v));
-    }
-
-    const r = await fetch(url, {
+    const r = await fetch(urls.add, {
       method: "POST",
       credentials: "same-origin",
+      cache: "no-store",
+      redirect: "manual",
       headers,
-      body,
+      body: JSON.stringify(payload),
     });
 
-    if (!r.ok) {
-      const t = await r.text().catch(() => "");
-      throw new Error(`POST ${url} → ${r.status} ${t.slice(0, 200)}`);
+    const ct = (r.headers.get("content-type") || "").toLowerCase();
+    // Datasette might respond with HTML on auth/CSRF errors; surface it
+    if (!ct.includes("application/json")) {
+      const t = await r.text();
+      throw new Error(`risposta non-JSON (HTTP ${r.status}, ${ct}): ${t.slice(0, 220)}`);
     }
-    return r.json().catch(() => ({}));
+    const j = await r.json();
+    if (!r.ok || !j || j.ok !== true) {
+      throw new Error((j && j.error) ? j.error : `HTTP ${r.status}`);
+    }
+    return j;
   }
 
-  async function refresh() {
-    const table = qs("#pillole-recent");
-    if (!table) return;
-    const tbody = qs("tbody", table);
-    if (!tbody) return;
+  function wireCard(card, urls) {
+    const farmaco = (card.dataset.farmaco || "").trim();
+    const doseDefaultRaw = (card.dataset.doseDefault || "").trim();
+    const doseDefault = doseDefaultRaw ? Number(doseDefaultRaw) : null;
 
-    const r = await fetch(`${URLS.recent}?limit=20`, { credentials: "same-origin" });
-    if (!r.ok) return;
+    const btnQuick = card.querySelector('button[data-action="quick"]');
+    const btnPlus  = card.querySelector('button[data-action="plus"]');
+    const doseBox  = card.querySelector("[data-dose-box]");
+    const doseIn   = card.querySelector("[data-dose-input]");
 
-    const data = await r.json().catch(() => null);
-    const rows = (data && Array.isArray(data.rows)) ? data.rows : [];
-
-    tbody.innerHTML = "";
-
-    if (!rows.length) {
-      const tr = document.createElement("tr");
-      tr.innerHTML = '<td colspan="3" style="opacity:.65">— nessuna entry —</td>';
-      tbody.appendChild(tr);
-      return;
+    async function doPost(btn, dose) {
+      clearCardError(card);
+      setBusy(btnQuick, true);
+      setBusy(btnPlus, true);
+      try {
+        await postAdd(urls, farmaco, dose);
+        log(`OK farmaco=${farmaco}`);
+        await fetchRecent(urls);
+      } catch (e) {
+        const msg = (e && e.message) ? e.message : String(e);
+        showCardError(card, "Errore: " + msg);
+        log(`ERRORE: ${msg}`);
+      } finally {
+        setBusy(btnQuick, false);
+        setBusy(btnPlus, false);
+      }
     }
 
-    for (const row of rows) {
-      const tr = document.createElement("tr");
-      const quando = row.quando ?? "";
-      const farmaco = row.farmaco ?? "";
-      const dose = row.dose ?? "";
-      tr.innerHTML = `<td>${escapeHtml(quando)}</td><td>${escapeHtml(farmaco)}</td><td>${escapeHtml(dose)}</td>`;
-      tbody.appendChild(tr);
+    if (btnQuick) {
+      btnQuick.addEventListener("click", async () => {
+        const d = (doseDefault !== null && !Number.isNaN(doseDefault)) ? doseDefault : null;
+        await doPost(btnQuick, d);
+      });
     }
-  }
 
-  function bindButtons() {
-    qsa("[data-action]").forEach((btn) => {
-      btn.addEventListener("click", async () => {
-        const card = btn.closest("[data-farmaco]");
-        if (!card) return;
-
-        const farmaco = card.dataset.farmaco;
-        const action = btn.dataset.action;
-
-        let dose = "";
-        if (action === "quick") {
-          dose = card.dataset.doseDefault || "";
-        } else if (action === "plus") {
-          const box = qs("[data-dose-box]", card);
-          const input = qs("[data-dose-input]", card);
-          if (box && box.hasAttribute("hidden")) {
-            box.removeAttribute("hidden");
-            input && input.focus();
-            return;
-          }
-          dose = input && input.value ? String(input.value).trim() : "";
-        } else {
-          return;
-        }
-
-        try {
-          setBusy(btn, true);
-          await apiPostForm(URLS.add, { farmaco, dose });
-          await refresh();
-        } catch (e) {
-          console.error(e);
-          alert(String(e.message || e));
-        } finally {
-          setBusy(btn, false);
+    if (btnPlus) {
+      btnPlus.addEventListener("click", async () => {
+        // toggle input box
+        if (doseBox) {
+          doseBox.hidden = !doseBox.hidden;
+          if (!doseBox.hidden && doseIn) doseIn.focus();
         }
       });
-    });
+    }
+
+    if (doseIn) {
+      doseIn.addEventListener("keydown", async (ev) => {
+        if (ev.key === "Enter") {
+          ev.preventDefault();
+          const v = (doseIn.value || "").replace(",", ".").trim();
+          const d = v ? Number(v) : null;
+          await doPost(btnPlus || btnQuick, (Number.isNaN(d) ? null : d));
+          if (doseBox) doseBox.hidden = true;
+          doseIn.value = "";
+        }
+        if (ev.key === "Escape") {
+          if (doseBox) doseBox.hidden = true;
+          doseIn.value = "";
+        }
+      });
+    }
   }
 
-  function init() {
-    bindButtons();
-    refresh();
+  function main() {
+    const urls = getUrls();
+    if (!urls || !urls.add || !urls.recent) {
+      console.error("pillole: missing urls");
+      return;
+    }
+    log(`init add=${urls.add} recent=${urls.recent}`);
+    $all("[data-pillole-card]").forEach((card) => wireCard(card, urls));
+    fetchRecent(urls);
   }
 
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", init);
+    document.addEventListener("DOMContentLoaded", main);
   } else {
-    init();
+    main();
   }
 })();

@@ -121,6 +121,12 @@
   </tbody>
 </table>
 
+
+<details id="pillole-debug" style="margin-top:14px">
+  <summary><strong>Debug (log richieste)</strong></summary>
+  <pre style="white-space:pre-wrap; font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace; font-size:12px; padding:10px; border:1px solid rgba(0,0,0,.15); border-radius:10px; background:rgba(0,0,0,.03); margin-top:10px;"></pre>
+</details>
+
 <script id="pillole-urls" type="application/json">
 {
   "add": "{{ urls.path('/-/pillole/add') }}",
@@ -128,5 +134,5 @@
 }
 </script>
 
-<script src="{{ urls.path('/-/pillole/pillole.js') }}?v=14"></script>
+<script src="{{ urls.path('/-/pillole/pillole.js') }}?v=18"></script>
 {% endblock %}
